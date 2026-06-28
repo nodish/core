@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": false
+  },
+  "include": [
+    "src/pack",
+    "src/vue",
+    "src/store",
+    "src/components",
+    "src/vue-shims.d.ts"
+  ]
+}
