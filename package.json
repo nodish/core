@@ -22,6 +22,8 @@
     "./vue.css": "./dist/vue.css"
   },
   "scripts": {
+    "preinstall": "node scripts/copy-dev-to-local.mjs",
+    "dev": "vite --config vite.config.dev.ts",
     "build": "vite build --config vite.config.pack.ts && vite build --config vite.config.vue.ts && dts-bundle-generator --export-referenced-types --no-check -o dist/pack.d.ts src/pack/index.ts",
     "typecheck": "tsc --noEmit"
   },
@@ -29,6 +31,7 @@
     "vue": "^3.5.0"
   },
   "devDependencies": {
+    "@types/node": "^26.0.1",
     "@vitejs/plugin-vue": "^6.0.7",
     "dts-bundle-generator": "^9.5.1",
     "typescript": "~6.0.2",
