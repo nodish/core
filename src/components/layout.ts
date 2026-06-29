@@ -1,4 +1,9 @@
-import type { DefiniteNode } from "../store/model";
+import type {
+  DefiniteNode,
+  Port,
+  PortTypeDefinition,
+} from "../store/model";
+import { effectiveWidget, widgetRowHeight } from "../store/types/effectiveWidget";
 
 // Layout constants - shared by the node DOM and the wire math so sockets and
 // wire endpoints always line up.
@@ -7,8 +12,42 @@ export const NODE_MIN_WIDTH = 60;
 export const NODE_MAX_WIDTH = 320;
 export const HEADER_H = 20;
 export const ROW_H = 20;
+export const ROW_MIN_H = 20;
+export const ROW_MAX_H = 240;
 export const NODE_FONT_SIZE = 11;
 export const NODE_PADDING_X = 6;
+
+export type PortTypeLookup = (
+  port: Port,
+) => PortTypeDefinition | undefined;
+
+function clampRowHeight(h: number): number {
+  return Math.max(ROW_MIN_H, Math.min(ROW_MAX_H, h));
+}
+
+/** Per-port row height in px (customProps.rowHeight wins over widget defaults). */
+export function portRowHeight(
+  port: Port,
+  typeDef?: PortTypeDefinition,
+): number {
+  const override = port.customProps?.rowHeight;
+  if (typeof override === "number" && override > 0) {
+    return clampRowHeight(override);
+  }
+  const widget = effectiveWidget(typeDef, port);
+  return clampRowHeight(widgetRowHeight(widget, ROW_H));
+}
+
+function columnBodyHeight(
+  ports: Port[],
+  lookup?: PortTypeLookup,
+): number {
+  let sum = 0;
+  for (const port of ports) {
+    sum += portRowHeight(port, lookup?.(port));
+  }
+  return sum;
+}
 
 // Effective width of a node, honoring its per-instance override.
 export function nodeWidth(node: DefiniteNode): number {
@@ -22,29 +61,54 @@ export function rowCount(node: DefiniteNode): number {
   );
 }
 
-export function nodeHeight(node: DefiniteNode): number {
-  return HEADER_H + rowCount(node) * ROW_H;
+export function nodeHeight(
+  node: DefiniteNode,
+  lookup?: PortTypeLookup,
+): number {
+  const inH = columnBodyHeight(Object.values(node.inputs), lookup);
+  const outH = columnBodyHeight(Object.values(node.outputs), lookup);
+  return HEADER_H + Math.max(inH, outH);
 }
 
-// Vertical center of the i-th port row, relative to the node top.
+// Vertical center of the i-th port row at uniform ROW_H (legacy helper).
 export function rowY(index: number): number {
   return HEADER_H + (index + 0.5) * ROW_H;
+}
+
+function portCenterY(
+  ports: Port[],
+  portId: string,
+  lookup?: PortTypeLookup,
+): number | null {
+  let y = HEADER_H;
+  for (const port of ports) {
+    const h = portRowHeight(port, lookup?.(port));
+    if (port.id === portId) return y + h / 2;
+    y += h;
+  }
+  return null;
 }
 
 export type Point = { x: number; y: number };
 
 // Absolute position (in viewer space) of a port on a node, for wire endpoints.
 // Inputs sit on the left edge, outputs on the right edge.
-export function portPosition(node: DefiniteNode, portId: string): Point | null {
-  const inIdx = Object.values(node.inputs).findIndex((p) => p.id === portId);
-  if (inIdx >= 0) {
-    return { x: node.location.x, y: node.location.y + rowY(inIdx) };
+export function portPosition(
+  node: DefiniteNode,
+  portId: string,
+  lookup?: PortTypeLookup,
+): Point | null {
+  const inputs = Object.values(node.inputs);
+  const inY = portCenterY(inputs, portId, lookup);
+  if (inY !== null) {
+    return { x: node.location.x, y: node.location.y + inY };
   }
-  const outIdx = Object.values(node.outputs).findIndex((p) => p.id === portId);
-  if (outIdx >= 0) {
+  const outputs = Object.values(node.outputs);
+  const outY = portCenterY(outputs, portId, lookup);
+  if (outY !== null) {
     return {
       x: node.location.x + nodeWidth(node),
-      y: node.location.y + rowY(outIdx),
+      y: node.location.y + outY,
     };
   }
   return null;

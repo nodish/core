@@ -18,14 +18,26 @@ const emit = defineEmits<{
   commit: [];
 }>();
 
-const displayValue = computed(() => {
+const displayValue = computed((): string => {
   const v = props.port.value;
-  if (v !== undefined && v !== null && v !== "") return v;
+  if (v !== undefined && v !== null && v !== "") return String(v);
   return "";
 });
 
+const multiline = computed(
+  () =>
+    props.effectiveWidget?.kind === "text" &&
+    (props.effectiveWidget.rows ?? 1) > 1,
+);
+
+const textareaRows = computed(() =>
+  props.effectiveWidget?.kind === "text"
+    ? (props.effectiveWidget.rows ?? 1)
+    : 1,
+);
+
 function onInput(e: Event) {
-  const raw = (e.target as HTMLInputElement).value;
+  const raw = (e.target as HTMLInputElement | HTMLTextAreaElement).value;
   const parsed = props.typeDef?.parse?.(raw) ?? raw;
   emit("update:value", parsed);
 }
@@ -37,7 +49,19 @@ function onCommit(e: Event) {
 </script>
 
 <template>
+  <textarea
+    v-if="multiline"
+    class="field multiline"
+    :value="displayValue"
+    :placeholder="placeholder"
+    :title="port.name"
+    :rows="textareaRows"
+    @input="onInput"
+    @change="onCommit"
+    @pointerdown.stop
+  />
   <input
+    v-else
     class="field"
     type="text"
     :value="displayValue"
@@ -61,5 +85,11 @@ function onCommit(e: Event) {
   background: #1c1f25;
   border: 1px solid rgba(0, 0, 0, 0.4);
   border-radius: 3px;
+}
+.field.multiline {
+  height: 100%;
+  min-height: 0;
+  resize: none;
+  line-height: 1.3;
 }
 </style>

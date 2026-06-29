@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { DefiniteNode, NodeMap } from "../store/model";
-import { portPosition, wirePath } from "./layout";
+import {
+  portPosition,
+  type PortTypeLookup,
+  wirePath,
+} from "./layout";
 
 const props = defineProps<{
   map: NodeMap;
@@ -10,6 +14,8 @@ const props = defineProps<{
   // Slice trail while right-drag cutting connections.
   slicePath?: string | null;
 }>();
+
+const portTypeLookup: PortTypeLookup = (port) => props.map.types[port.type];
 
 const nodesById = computed(() => {
   const m: Record<string, DefiniteNode> = {};
@@ -23,8 +29,8 @@ const wires = computed(() =>
       const fromNode = nodesById.value[c.from.node];
       const toNode = nodesById.value[c.to.node];
       if (!fromNode || !toNode) return null;
-      const a = portPosition(fromNode, c.from.port);
-      const b = portPosition(toNode, c.to.port);
+      const a = portPosition(fromNode, c.from.port, portTypeLookup);
+      const b = portPosition(toNode, c.to.port, portTypeLookup);
       if (!a || !b) return null;
       return { id: c.id, d: wirePath(a, b) };
     })

@@ -23,12 +23,27 @@ export type PortType = PortTypeId;
  * type definition; the Vue viewer resolves it to a concrete component.
  */
 export type TypeWidgetSpec =
-  | { kind: "number"; min?: number; max?: number; step?: number }
-  | { kind: "text" }
+  | {
+      kind: "number";
+      min?: number;
+      max?: number;
+      step?: number;
+      /** Port row height in px; defaults to one line (20px). */
+      rowHeight?: number;
+    }
+  | {
+      kind: "text";
+      /** Multiline row count; height is `rows × 20px` unless `rowHeight` is set. */
+      rows?: number;
+      /** Port row height in px; overrides `rows`. */
+      rowHeight?: number;
+    }
   | {
       kind: "custom";
       /** Id passed to `registerComponentWidget` in a pack's `setup` hook. */
       componentId: string;
+      /** Port row height in px; defaults to one line (20px). */
+      rowHeight?: number;
     };
 
 /**
@@ -86,7 +101,7 @@ export type PortDefinition = {
   multi?: boolean;
   /**
    * Widget-specific configuration merged on top of the type's widget spec.
-   * Recognized keys: `options`, `min`, `max`, `step`.
+   * Recognized keys: `options`, `min`, `max`, `step`, `rows`, `rowHeight`.
    */
   customProps?: Record<string, unknown>;
 };

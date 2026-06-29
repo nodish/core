@@ -45,6 +45,7 @@ import {
   nodeHeight,
   nodeWidth,
   portPosition,
+  portRowHeight,
   sampleWire,
   segmentsIntersect,
   wirePath,
@@ -55,10 +56,13 @@ const BOX_THRESHOLD = 4;
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 2;
 const ZOOM_SENSITIVITY = 0.001;
-// Extra clearance around each port's hit band (both x beyond node edges and y
-// beyond the port row centre). ROW_H gives a full row of breathing room above
-// and below, making it easy to hit a port anywhere along its row.
-const HIT_MARGIN = ROW_H;
+// Extra horizontal clearance around each port's hit band. Vertical range uses
+// half of each port's row height so tall widgets remain easy to connect to.
+const HIT_MARGIN_X = ROW_H;
+
+function portTypeLookup(port: Port) {
+  return activeMap.value.types[port.type];
+}
 
 const props = withDefaults(
   defineProps<{
@@ -212,7 +216,7 @@ function nodesInBox(a: Point, b: Point): string[] {
   return activeMap.value.graph.nodes
     .filter((n) => {
       const w = nodeWidth(n);
-      const h = nodeHeight(n);
+      const h = nodeHeight(n, portTypeLookup);
       return (
         n.location.x < maxX &&
         n.location.x + w > minX &&
@@ -350,7 +354,7 @@ const pendingSnapped = computed((): Point | null => {
   const hit = nearestPort(cur, wantDir, p.ref.node, pendingBlockedNodes.value);
   if (!hit) return null;
   const node = activeMap.value.graph.nodes.find((n) => n.id === hit.node);
-  return node ? portPosition(node, hit.port) : null;
+  return node ? portPosition(node, hit.port, portTypeLookup) : null;
 });
 
 const pendingPath = computed(() => {
@@ -363,7 +367,7 @@ const pendingPath = computed(() => {
 
 function onConnectStart(ref: PortRef, port: Port, ev: PointerEvent) {
   const node = activeMap.value.graph.nodes.find((n) => n.id === ref.node);
-  const pos = node ? portPosition(node, ref.port) : null;
+  const pos = node ? portPosition(node, ref.port, portTypeLookup) : null;
   if (!pos) return;
   pending.value = { ref, dir: port.direction, pos };
   pendingCursor.value = toWorld(ev.clientX, ev.clientY);
@@ -382,7 +386,7 @@ function onConnectMove(ev: PointerEvent) {
 
 // Nearest socket of the wanted direction whose hit zone contains the cursor,
 // excluding the source node so a wire can't dead-end on its own node. The hit
-// zone spans the port row vertically (2×ROW_H: pos.y ± HIT_MARGIN) so dropping
+// zone spans the port row vertically (pos.y ± half row height) so dropping
 // on its field/label connects too. Ties (e.g. overlapping nodes) resolve to
 // the closest socket.
 function nearestPort(
@@ -396,16 +400,17 @@ function nearestPort(
   for (const node of activeMap.value.graph.nodes) {
     if (node.id === excludeNode) continue;
     if (blockedNodes?.has(node.id)) continue;
-    const left = node.location.x - HIT_MARGIN;
-    const right = node.location.x + nodeWidth(node) + HIT_MARGIN;
+    const left = node.location.x - HIT_MARGIN_X;
+    const right = node.location.x + nodeWidth(node) + HIT_MARGIN_X;
     if (world.x < left || world.x > right) continue;
     const ports = wantDir === "input" ? node.inputs : node.outputs;
     for (const port of Object.values(ports)) {
       if (port.userOnly) continue; // user-only inputs have no socket to hit
-      const pos = portPosition(node, port.id);
+      const typeDef = portTypeLookup(port);
+      const pos = portPosition(node, port.id, portTypeLookup);
       if (!pos) continue;
-      if (world.y < pos.y - HIT_MARGIN || world.y > pos.y + HIT_MARGIN)
-        continue;
+      const half = portRowHeight(port, typeDef) / 2;
+      if (world.y < pos.y - half || world.y > pos.y + half) continue;
       const dist = Math.hypot(pos.x - world.x, pos.y - world.y);
       if (dist < bestDist) {
         bestDist = dist;
@@ -498,8 +503,8 @@ function sliceSegment(p1: Point, p2: Point) {
     );
     const toNode = activeMap.value.graph.nodes.find((n) => n.id === c.to.node);
     if (!fromNode || !toNode) continue;
-    const a = portPosition(fromNode, c.from.port);
-    const b = portPosition(toNode, c.to.port);
+    const a = portPosition(fromNode, c.from.port, portTypeLookup);
+    const b = portPosition(toNode, c.to.port, portTypeLookup);
     if (!a || !b) continue;
     const poly = sampleWire(a, b);
     for (let i = 0; i < poly.length - 1; i++) {

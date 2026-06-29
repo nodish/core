@@ -12,6 +12,7 @@ import {
   NODE_PADDING_X,
   nodeHeight,
   nodeWidth,
+  type PortTypeLookup,
 } from "./layout";
 
 const nodeFontSize = `${NODE_FONT_SIZE}px`;
@@ -95,6 +96,10 @@ function typeDefFor(port: Port) {
   return props.map.types[port.type];
 }
 
+const portTypeLookup: PortTypeLookup = (port) => props.map.types[port.type];
+
+const bodyHeight = computed(() => nodeHeight(props.node, portTypeLookup));
+
 type WidgetMode = "auto" | "editable" | "readonly";
 
 function widgetMode(side: "in" | "out"): WidgetMode {
@@ -173,7 +178,7 @@ function onHeaderPointerDown(ev: PointerEvent) {
       left: node.location.x + 'px',
       top: node.location.y + 'px',
       width: width + 'px',
-      height: nodeHeight(node) + 'px',
+      height: bodyHeight + 'px',
       zIndex: node.z ?? 0,
     }"
     @pointerdown="onNodePointerDown"

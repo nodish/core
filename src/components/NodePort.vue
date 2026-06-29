@@ -3,7 +3,7 @@ import { computed } from "vue";
 import type { Port, PortTypeDefinition } from "../store/model";
 import { effectiveWidget } from "../store/types/effectiveWidget";
 import PortValueWidget from "./types/PortValueWidget.vue";
-import { NODE_FONT_SIZE, ROW_H } from "./layout";
+import { NODE_FONT_SIZE, portRowHeight } from "./layout";
 
 const fontSize = `${NODE_FONT_SIZE}px`;
 
@@ -29,6 +29,10 @@ function onSocketDown(ev: PointerEvent) {
   if (ev.button !== 0) return;
   emit("connectStart", props.port, ev);
 }
+
+const rowHeightPx = computed(() =>
+  portRowHeight(props.port, props.typeDef),
+);
 
 const widget = computed(() => effectiveWidget(props.typeDef, props.port));
 
@@ -78,7 +82,7 @@ function onCommit() {
         'no-socket': side === 'in' && !hasSocketIn,
       },
     ]"
-    :style="{ height: ROW_H + 'px' }"
+    :style="{ height: rowHeightPx + 'px' }"
   >
     <span
       v-if="hasSocketIn"
@@ -125,6 +129,10 @@ function onCommit() {
 }
 .port.out.hasWidget {
   justify-content: flex-start;
+}
+.port.hasWidget :deep(.field) {
+  flex: 1;
+  min-width: 0;
 }
 .label {
   white-space: nowrap;
