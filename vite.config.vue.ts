@@ -14,14 +14,12 @@ export default defineConfig({
       entryRoot: "src",
       outDir: "dist",
       include: ["src/vue/index.ts", "src/**/*.ts", "src/**/*.vue"],
-      skipDiagnostics: true,
     }),
   ],
   build: {
     emptyOutDir: false,
     // Required for vite-plugin-lib-inject-css (skipped when false).
     cssCodeSplit: true,
-    codeSplitting: false,
     lib: {
       entry: resolve(__dirname, "src/vue/index.ts"),
       formats: ["es"],
@@ -31,7 +29,9 @@ export default defineConfig({
       external: ["vue"],
       output: {
         assetFileNames: (asset) =>
-          asset.names?.some((n) => n.endsWith(".css")) ? "vue.css" : "[name][extname]",
+          asset.names?.some((n) => n.endsWith(".css"))
+            ? "vue.css"
+            : "[name][extname]",
       },
     },
   },
