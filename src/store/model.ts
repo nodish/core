@@ -5,7 +5,7 @@ export type PortId = string;
 export type ConnectionId = string;
 export type NodeTypeId = string;
 
-export type Location = {
+export type NodeLocation = {
   x: number;
   y: number;
 };
@@ -190,7 +190,7 @@ export interface DefiniteNode {
   id: NodeId;
   /** {@link IndefiniteNode} this instance was created from. */
   typeId: NodeTypeId;
-  location: Location;
+  location: NodeLocation;
   inputs: NodeIO;
   outputs: NodeIO;
   label?: string;

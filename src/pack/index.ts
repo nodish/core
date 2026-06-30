@@ -14,6 +14,7 @@ export type { NodePack, PackSetupContext } from "../store/registry";
 export type {
   GraphPortSpec,
   IndefiniteNode,
+  NodeLocation,
   PortDefinition,
   PortTypeDefinition,
   TypeWidgetSpec,

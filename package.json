@@ -46,5 +46,8 @@
   "bugs": {
     "url": "https://github.com/nodish/core/issues"
   },
-  "homepage": "https://github.com/nodish/core#readme"
+  "homepage": "https://github.com/nodish/core#readme",
+  "publishConfig": {
+    "access": "public"
+  }
 }

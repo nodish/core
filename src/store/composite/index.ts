@@ -6,7 +6,7 @@ import type {
   CompositeState,
   DefiniteNode,
   GraphInterface,
-  Location,
+  NodeLocation,
   NodeMap,
 } from "../model";
 import { defaultGraphInterface } from "../model";
@@ -138,7 +138,7 @@ function initNestedState(
 // Create an empty composite on the parent graph.
 export function instantiateComposite(
   parent: NodeMap,
-  location: Location,
+  location: NodeLocation,
 ): DefiniteNode {
   if (!parent.nodeTypes[COMPOSITE_TYPE]) {
     registerNodeTypes(parent, { [COMPOSITE_TYPE]: compositeNode });

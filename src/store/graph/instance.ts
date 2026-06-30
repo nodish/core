@@ -1,7 +1,7 @@
 import type {
   DefiniteNode,
   IndefiniteNode,
-  Location,
+  NodeLocation,
   NodeIO,
   NodeIODefinition,
   PortDirection,
@@ -33,7 +33,7 @@ function materialize(io: NodeIODefinition, direction: PortDirection): NodeIO {
  */
 export function instantiate(
   def: IndefiniteNode,
-  location: Location,
+  location: NodeLocation,
 ): DefiniteNode {
   const { inputs, outputs } = resolveNodePorts(def, defaultParams(def));
   return {

@@ -8,7 +8,7 @@ import { validateGraphInterface } from "../interface/graphInterface";
 import type {
   DefiniteNode,
   GraphInterface,
-  Location,
+  NodeLocation,
   NodeMap,
 } from "../model";
 import { registerNodeTypes } from "../registry";
@@ -21,7 +21,7 @@ export const OUTPUT_TYPE = "io/output";
 export const DEFAULT_BOUNDARY_LAYOUT = {
   input: { x: 40, y: 120 },
   output: { x: 480, y: 130 },
-} satisfies Record<"input" | "output", Location>;
+} satisfies Record<"input" | "output", NodeLocation>;
 
 // Re-export for callers that import boundary types from this module.
 export type { GraphInterface } from "../model";
