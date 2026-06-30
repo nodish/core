@@ -5,8 +5,9 @@ An extensible node editor.
 ## Development
 
 ```bash
-npm i # will make a copy of /dev to /local, which is in the .gitignore
-npm run dev # will start the development server
+npm i
+npm run setup:local  # copies /dev → /local (first time only; local/ is gitignored)
+npm run dev
 ```
 
 ## Examples
