@@ -23,7 +23,7 @@ const title = computed(
   () => props.composite?.label || compositeNode.displayName,
 );
 const effectiveColor = computed(
-  () => props.composite?.color ?? compositeNode.color,
+  () => props.composite?.color ?? compositeNode.color ?? HEADER_COLOR,
 );
 
 function onTitleUpdate(value: string) {
