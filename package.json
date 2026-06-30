@@ -1,7 +1,7 @@
 {
   "name": "@nodish/core",
   "private": false,
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -18,8 +18,7 @@
       "types": "./dist/src/vue/index.d.ts",
       "import": "./dist/vue.js",
       "style": "./dist/vue.css"
-    },
-    "./vue.css": "./dist/vue.css"
+    }
   },
   "scripts": {
     "preinstall": "node scripts/copy-dev-to-local.mjs",
