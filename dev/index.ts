@@ -57,7 +57,7 @@ export const pack: NodePack = {
         result: { type: "boolean" },
       },
       execute(inputs) {
-        return { result: !Boolean(inputs.value) };
+        return { result: !(inputs.value as boolean) };
       },
     },
     "@test/greater-than": {
