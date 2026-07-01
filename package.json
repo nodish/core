@@ -3,6 +3,7 @@
   "private": false,
   "version": "0.2.0",
   "type": "module",
+  "license": "AGPL-3.0-or-later",
   "sideEffects": [
     "**/*.css"
   ],
