@@ -247,13 +247,8 @@ export interface GraphInterface {
 }
 
 export const defaultGraphInterface: GraphInterface = {
-  parameters: {
-    a: { type: "number", defaultValue: 0 },
-    b: { type: "number", defaultValue: 0 },
-  },
-  returns: {
-    result: { type: "number" },
-  },
+  parameters: {},
+  returns: {},
 };
 
 /**

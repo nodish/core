@@ -18,10 +18,8 @@ export interface CreateNodeMapInit {
   graph?: NodeGraph;
   /** Pre-loaded pack ids (usually leave empty and use {@link NodeMap.loadPack}). */
   extensions?: string[];
-  /** Graph boundary ports; defaults to `a`/`b` in, `result` out. */
+  /** Graph boundary ports; defaults to no inputs and no outputs. */
   graphInterface?: GraphInterface;
-  /** Register the built-in `@local/core` pack. Default: `true`. */
-  defaultPack?: boolean;
   /** Extra types to merge into the registry at creation time. */
   types?: TypeRegistry;
   /** Extra node types to merge into the registry at creation time (authoring form). */

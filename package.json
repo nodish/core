@@ -1,7 +1,7 @@
 {
   "name": "@nodish/core",
   "private": false,
-  "version": "0.1.3",
+  "version": "0.1.4",
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -24,7 +24,8 @@
     "setup:local": "node scripts/copy-dev-to-local.mjs",
     "dev": "node scripts/copy-dev-to-local.mjs && vite --config vite.config.dev.ts",
     "build": "vite build --config vite.config.pack.ts && vite build --config vite.config.vue.ts && dts-bundle-generator --export-referenced-types --no-check -o dist/pack.d.ts src/pack/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:dev": "tsc --noEmit -p tsconfig.dev.json"
   },
   "peerDependencies": {
     "vue": "^3.5.0"

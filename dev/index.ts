@@ -7,6 +7,14 @@ const BOOLEAN_WIDGET_ID = "test/boolean";
 export const pack: NodePack = {
   id: "test",
   types: {
+    number: defineType({
+      id: "number",
+      label: "Number",
+      color: "#7dd3fc",
+      validate: (value) => typeof value === "number" && !Number.isNaN(value),
+      defaultValue: 0,
+      widget: { kind: "number" },
+    }),
     boolean: defineType({
       id: "boolean",
       label: "Boolean",

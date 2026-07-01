@@ -3,7 +3,7 @@ import TextWidget from "./TextWidget.vue";
 import { registerTypeWidget } from "./registry";
 
 /**
- * Register built-in Vue widgets for the core `number` and `string` types.
+ * Register built-in Vue widgets for conventional `number` and `string` type ids.
  * Call once at app startup before loading packs that rely on those widgets.
  */
 export function registerDefaultTypeWidgets(): void {
