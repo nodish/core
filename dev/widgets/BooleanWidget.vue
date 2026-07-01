@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Port, PortTypeDefinition } from "@nodish/core/pack";
+import type { Port, PortTypeDefinition } from "@nodish/core";
 
 defineProps<{
   port: Port;

@@ -1,7 +1,7 @@
 {
   "name": "@nodish/core",
   "private": false,
-  "version": "0.1.4",
+  "version": "0.2.0",
   "type": "module",
   "sideEffects": [
     "**/*.css"
@@ -9,21 +9,18 @@
   "files": [
     "dist"
   ],
+  "types": "./dist/index.d.ts",
   "exports": {
-    "./pack": {
-      "types": "./dist/pack.d.ts",
-      "import": "./dist/pack.js"
-    },
-    "./vue": {
-      "types": "./dist/src/vue/index.d.ts",
-      "import": "./dist/vue.js",
-      "style": "./dist/vue.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "style": "./dist/index.css"
     }
   },
   "scripts": {
     "setup:local": "node scripts/copy-dev-to-local.mjs",
     "dev": "node scripts/copy-dev-to-local.mjs && vite --config vite.config.dev.ts",
-    "build": "vite build --config vite.config.pack.ts && vite build --config vite.config.vue.ts && dts-bundle-generator --export-referenced-types --no-check -o dist/pack.d.ts src/pack/index.ts",
+    "build": "vite build",
     "typecheck": "tsc --noEmit",
     "typecheck:dev": "tsc --noEmit -p tsconfig.dev.json"
   },
@@ -33,7 +30,6 @@
   "devDependencies": {
     "@types/node": "^26.0.1",
     "@vitejs/plugin-vue": "^6.0.7",
-    "dts-bundle-generator": "^9.5.1",
     "typescript": "~6.0.2",
     "vite": "^8.0.12",
     "vite-plugin-dts": "^4.5.4",

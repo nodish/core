@@ -10,8 +10,7 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      "@nodish/core/vue": resolve(root, "src/vue/index.ts"),
-      "@nodish/core/pack": resolve(root, "src/pack/index.ts"),
+      "@nodish/core": resolve(root, "src/vue/index.ts"),
     },
   },
   server: {

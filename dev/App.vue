@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createNodeMap, NodeViewer } from "@nodish/core/vue";
+import { createNodeMap, NodeViewer } from "@nodish/core";
 import { reactive } from "vue";
 import { pack } from ".";
 

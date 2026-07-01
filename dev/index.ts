@@ -1,4 +1,4 @@
-import { defineType, type NodePack } from "@nodish/core/pack";
+import { defineType, type NodePack } from "@nodish/core";
 import BooleanWidget from "./widgets/BooleanWidget.vue";
 
 /** Id passed to {@link TypeWidgetSpec} `kind: "custom"` and `registerComponentWidget`. */

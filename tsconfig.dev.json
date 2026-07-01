@@ -11,8 +11,7 @@
     "moduleDetection": "force",
     "noEmit": true,
     "paths": {
-      "@nodish/core/pack": ["./src/pack/index.ts"],
-      "@nodish/core/vue": ["./src/vue/index.ts"]
+      "@nodish/core": ["./src/vue/index.ts"]
     }
   },
   "include": ["dev/**/*", "local/**/*", "src/vue-shims.d.ts"]

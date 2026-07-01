@@ -1,8 +1,11 @@
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import dts from "vite-plugin-dts";
 import { libInjectCss } from "vite-plugin-lib-inject-css";
+
+const root = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [
@@ -10,27 +13,27 @@ export default defineConfig({
     libInjectCss(),
     dts({
       tsconfigPath: "./tsconfig.lib.json",
-      rollupTypes: false,
+      rollupTypes: true,
       entryRoot: "src",
       outDir: "dist",
       include: ["src/vue/index.ts", "src/**/*.ts", "src/**/*.vue"],
     }),
   ],
   build: {
-    emptyOutDir: false,
+    emptyOutDir: true,
     // Required for vite-plugin-lib-inject-css (skipped when false).
     cssCodeSplit: true,
     lib: {
-      entry: resolve(__dirname, "src/vue/index.ts"),
+      entry: resolve(root, "src/vue/index.ts"),
       formats: ["es"],
-      fileName: "vue",
+      fileName: "index",
     },
     rollupOptions: {
       external: ["vue"],
       output: {
         assetFileNames: (asset) =>
           asset.names?.some((n) => n.endsWith(".css"))
-            ? "vue.css"
+            ? "index.css"
             : "[name][extname]",
       },
     },
