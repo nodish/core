@@ -8,13 +8,21 @@ function numOverride(
   return typeof v === "number" ? v : undefined;
 }
 
+function alignedTypeDef(
+  typeDef: PortTypeDefinition | undefined,
+  port: Port,
+): PortTypeDefinition | undefined {
+  if (!typeDef || typeDef.id !== port.type) return undefined;
+  return typeDef;
+}
+
 // Merge a port's customProps onto the type's widget spec.
 // Recognized port.customProps overrides: min, max, step, rows, rowHeight.
 export function effectiveWidget(
   typeDef: PortTypeDefinition | undefined,
   port: Port,
 ): TypeWidgetSpec | undefined {
-  const base = typeDef?.widget;
+  const base = alignedTypeDef(typeDef, port)?.widget;
   const overrides = port.customProps;
   if (!base && !overrides) return undefined;
 

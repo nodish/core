@@ -220,7 +220,7 @@ function onHeaderPointerDown(ev: PointerEvent) {
       >
         <NodePort
           v-for="port in outputs"
-          :key="port.id"
+          :key="`${port.id}-${port.type}`"
           :port="port"
           :type-def="typeDefFor(port)"
           :color="portColor(port.type)"

@@ -95,6 +95,7 @@ function onCommit() {
 
     <PortValueWidget
       v-if="showWidget"
+      :key="`${port.id}-${port.type}`"
       :port="port"
       :type-def="typeDef"
       :effective-widget="widget"

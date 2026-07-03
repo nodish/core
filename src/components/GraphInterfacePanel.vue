@@ -8,7 +8,6 @@ import type {
 } from "../store/model";
 import { PORT_NAME_RE } from "../store/interface/graphInterface";
 import type { InterfaceMutator } from "../store/interface/editor";
-import { effectiveWidget } from "../store/types/effectiveWidget";
 import PortValueWidget from "./types/PortValueWidget.vue";
 import InspectorSection from "./inspector/InspectorSection.vue";
 
@@ -249,15 +248,10 @@ function onTypeChange(name: string, type: string) {
         <div v-if="isParameters" class="iface-default-row">
           <span class="iface-default-label">Default</span>
           <PortValueWidget
+            :key="`${row.name}-${row.spec.type}`"
             class="iface-default-widget"
             :port="defaultPort(row.name, row.spec)"
             :type-def="types[row.spec.type]"
-            :effective-widget="
-              effectiveWidget(
-                types[row.spec.type],
-                defaultPort(row.name, row.spec),
-              )
-            "
             mode="editable"
             :placeholder="row.name"
             @update:value="onDefaultDraft(row.name, $event)"

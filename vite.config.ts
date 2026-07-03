@@ -2,7 +2,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
-import dts from "vite-plugin-dts";
+import dts from "unplugin-dts/vite";
 import { libInjectCss } from "vite-plugin-lib-inject-css";
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -13,10 +13,11 @@ export default defineConfig({
     libInjectCss(),
     dts({
       tsconfigPath: "./tsconfig.lib.json",
-      rollupTypes: true,
+      processor: "vue",
       entryRoot: "src",
-      outDir: "dist",
+      outDirs: "dist",
       include: ["src/vue/index.ts", "src/**/*.ts", "src/**/*.vue"],
+      bundleTypes: true,
     }),
   ],
   build: {
