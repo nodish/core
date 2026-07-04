@@ -44,6 +44,11 @@ export type TypeWidgetSpec =
       componentId: string;
       /** Port row height in px; defaults to one line (20px). */
       rowHeight?: number;
+    }
+  | {
+      /** No inline editor — port shows label + socket only (wire in a value). */
+      kind: "none";
+      rowHeight?: number;
     };
 
 /**
@@ -114,6 +119,12 @@ export type PortDefinition = {
   /** Named widget variant from the port type's {@link PortTypeDefinition.widgets}. */
   widgetId?: string;
   /**
+   * Input-only. No inline value editor — label + socket only (like a wired port).
+   * Overrides the type widget; use {@link TypeWidgetSpec} `kind: "none"` for a
+   * type-wide default.
+   */
+  connectionOnly?: boolean;
+  /**
    * Widget-specific configuration merged on top of the type's widget spec.
    * Recognized keys: `options`, `min`, `max`, `step`, `rows`, `rowHeight`.
    */
@@ -136,6 +147,7 @@ export type Port = {
   userOnly?: boolean;
   multi?: boolean;
   widgetId?: string;
+  connectionOnly?: boolean;
   customProps?: Record<string, unknown>;
 };
 

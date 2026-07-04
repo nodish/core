@@ -70,94 +70,9 @@ export const pack: NodePack = {
         return { result: !(inputs.value as boolean) };
       },
     },
-    "@test/greater-than": {
-      typeId: "@test/greater-than",
-      displayName: "Greater than",
-      color: "#3d4a5a",
-      description: "True when a > b",
-      inputs: {
-        a: { type: "number", defaultValue: 0 },
-        b: { type: "number", defaultValue: 0 },
-      },
-      outputs: {
-        result: { type: "boolean" },
-      },
-      execute(inputs) {
-        return {
-          result: Number(inputs.a ?? 0) > Number(inputs.b ?? 0),
-        };
-      },
-    },
-    "@test/mux": {
-      typeId: "@test/mux",
-      displayName: "Mux",
-      color: "#5a4a3a",
-      description:
-        "Accepts number or boolean via a union input (connection-only)",
-      inputs: {
-        value: {
-          type: "number",
-          types: ["number", "boolean"],
-        },
-      },
-      outputs: {
-        result: { type: "number" },
-      },
-      execute(inputs) {
-        const v = inputs.value;
-        if (typeof v === "boolean") return { result: v ? 1 : 0 };
-        return { result: Number(v ?? 0) };
-      },
-    },
   },
   setup({ registerComponentWidget }) {
     registerComponentWidget(BOOLEAN_WIDGET_ID, BooleanWidget);
     registerComponentWidget(BOOLEAN_TOGGLE_ID, ToggleWidget);
-  },
-};
-
-/** Lower-priority pack that loses the shared node id to {@link packHigh}. */
-export const packLow: NodePack = {
-  id: "@test/low",
-  priority: 1,
-  nodeTypes: {
-    "@test/shared": {
-      typeId: "@test/shared",
-      displayName: "Shared (low)",
-      color: "#553333",
-      description: "Low-priority version of a shared node id",
-      inputs: {
-        value: { type: "number", defaultValue: 0 },
-      },
-      outputs: {
-        result: { type: "number" },
-      },
-      execute(inputs) {
-        return { result: Number(inputs.value ?? 0) };
-      },
-    },
-  },
-};
-
-/** Higher-priority pack that wins over {@link packLow} for `@test/shared`. */
-export const packHigh: NodePack = {
-  id: "@test/high",
-  priority: 10,
-  nodeTypes: {
-    "@test/shared": {
-      typeId: "@test/shared",
-      displayName: "Shared (high)",
-      color: "#335533",
-      description: "High-priority version of a shared node id",
-      inputs: {
-        value: { type: "number", defaultValue: 0 },
-      },
-      outputs: {
-        result: { type: "number" },
-      },
-      execute(inputs) {
-        return { result: Number(inputs.value ?? 0) * 2 };
-      },
-    },
   },
 };

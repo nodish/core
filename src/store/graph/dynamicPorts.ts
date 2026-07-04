@@ -59,6 +59,7 @@ export function reconcileSide(
       existing.userOnly = d.userOnly;
       existing.multi = d.multi;
       existing.widgetId = d.widgetId;
+      existing.connectionOnly = d.connectionOnly;
       existing.customProps = d.customProps;
       next[existing.id] = existing;
     } else {
@@ -73,6 +74,7 @@ export function reconcileSide(
         userOnly: d.userOnly,
         multi: d.multi,
         widgetId: d.widgetId,
+        connectionOnly: d.connectionOnly,
         customProps: d.customProps,
       };
     }

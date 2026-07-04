@@ -1,4 +1,10 @@
-import type { Port, PortDefinition, PortTypeId } from "../model";
+import type {
+  Port,
+  PortDefinition,
+  PortTypeDefinition,
+  PortTypeId,
+} from "../model";
+import { effectiveWidget } from "../types/effectiveWidget";
 
 /** Accepted types for a port. Falls back to `[port.type]` when `types` is omitted. */
 export function portTypes(
@@ -14,9 +20,18 @@ export function isUnionPort(
   return portTypes(port).length > 1;
 }
 
-/** Union ports are connection-only — no inline value editor when disconnected. */
+/**
+ * Ports with no inline editor when disconnected: unions, explicit
+ * {@link Port.connectionOnly}, or type widget `kind: "none"`.
+ */
 export function isConnectionOnly(
-  port: Pick<Port | PortDefinition, "type" | "types">,
+  port: Pick<Port | PortDefinition, "type" | "types" | "connectionOnly">,
+  typeDef?: PortTypeDefinition,
 ): boolean {
-  return isUnionPort(port);
+  if (port.connectionOnly) return true;
+  if (isUnionPort(port)) return true;
+  if (typeDef && effectiveWidget(typeDef, port as Port)?.kind === "none") {
+    return true;
+  }
+  return false;
 }

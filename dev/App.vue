@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { createNodeMap, NodeViewer } from "@nodish/core";
 import { reactive } from "vue";
-import { pack, packHigh, packLow } from ".";
+import { pack } from ".";
 
 const map = reactive(createNodeMap({}));
 map.loadPack(pack);
-map.loadPack(packLow);
-map.loadPack(packHigh);
 </script>
 
 <template>

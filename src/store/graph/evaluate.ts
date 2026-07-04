@@ -65,7 +65,7 @@ export function runGraph(map: NodeMap, inputs: Values = {}): GraphRunResult {
         vals[port.name] = srcs.map(valueFrom);
       } else if (srcs.length) {
         vals[port.name] = valueFrom(srcs[0]);
-      } else if (isConnectionOnly(port)) {
+      } else if (isConnectionOnly(port, map.types[port.type])) {
         vals[port.name] = undefined;
       } else {
         let v = port.value;

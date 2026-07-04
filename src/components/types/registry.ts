@@ -11,7 +11,10 @@ import TextWidget from "./TextWidget.vue";
 const byTypeId = new Map<string, Map<string, Component>>();
 const byComponentId = new Map<string, Component>();
 
-const genericByKind: Record<TypeWidgetSpec["kind"], Component> = {
+const genericByKind: Record<
+  Exclude<TypeWidgetSpec["kind"], "none">,
+  Component
+> = {
   number: NumberWidget,
   text: TextWidget,
   custom: TextWidget,
@@ -89,10 +92,13 @@ export function resolveTypeWidget(
     return registered.get("default")!;
   }
 
+  if (effectiveWidget?.kind === "none") {
+    return TextWidget;
+  }
   if (effectiveWidget?.kind === "custom") {
     return byComponentId.get(effectiveWidget.componentId) ?? TextWidget;
   }
-  if (effectiveWidget?.kind) {
+  if (effectiveWidget?.kind === "number" || effectiveWidget?.kind === "text") {
     return genericByKind[effectiveWidget.kind] ?? TextWidget;
   }
   if (alignedTypeDef?.widget?.kind === "custom") {
@@ -100,7 +106,7 @@ export function resolveTypeWidget(
       byComponentId.get(alignedTypeDef.widget.componentId) ?? TextWidget
     );
   }
-  if (alignedTypeDef?.widget?.kind) {
+  if (alignedTypeDef?.widget?.kind && alignedTypeDef.widget.kind !== "none") {
     return genericByKind[alignedTypeDef.widget.kind] ?? TextWidget;
   }
   return TextWidget;

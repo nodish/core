@@ -44,7 +44,7 @@ const placeholder = computed(() => {
 
 const showEditable = computed(
   () =>
-    !isConnectionOnly(props.port) &&
+    !isConnectionOnly(props.port, props.typeDef) &&
     (props.widgetMode === "editable" ||
       (props.side === "in" && !!props.port.userOnly) ||
       (props.widgetMode === "auto" &&

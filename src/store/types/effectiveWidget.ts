@@ -65,6 +65,13 @@ export function effectiveWidget(
     return undefined;
   }
 
+  if (base.kind === "none") {
+    return {
+      kind: "none",
+      rowHeight: numOverride(overrides, "rowHeight") ?? base.rowHeight,
+    };
+  }
+
   if (base.kind === "number") {
     return {
       kind: "number",

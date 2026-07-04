@@ -115,5 +115,9 @@ function defaultsForWidget(
       return {
         format: (v) => (v === undefined || v === null ? "" : String(v)),
       };
+    case "none":
+      return {
+        format: (v) => (v === undefined || v === null ? "" : String(v)),
+      };
   }
 }

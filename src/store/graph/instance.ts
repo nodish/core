@@ -22,6 +22,7 @@ function materialize(io: NodeIODefinition, direction: PortDirection): NodeIO {
       userOnly: def.userOnly,
       multi: def.multi,
       widgetId: def.widgetId,
+      connectionOnly: def.connectionOnly,
       customProps: def.customProps,
     };
   }
