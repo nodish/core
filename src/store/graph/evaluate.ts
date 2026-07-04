@@ -1,6 +1,7 @@
 import type { DefiniteNode, NodeId, NodeMap, PortRef } from "../model";
 import { buildNestedMap, isCompositeNode } from "../composite";
 import { INPUT_TYPE, OUTPUT_TYPE } from "../nodes/io";
+import { isConnectionOnly } from "./portTypes";
 
 /** Port values keyed by port name. */
 export type Values = Record<string, unknown>;
@@ -64,6 +65,8 @@ export function runGraph(map: NodeMap, inputs: Values = {}): GraphRunResult {
         vals[port.name] = srcs.map(valueFrom);
       } else if (srcs.length) {
         vals[port.name] = valueFrom(srcs[0]);
+      } else if (isConnectionOnly(port)) {
+        vals[port.name] = undefined;
       } else {
         let v = port.value;
         if (v === undefined && useDefaults) {

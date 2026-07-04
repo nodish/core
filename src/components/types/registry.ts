@@ -8,7 +8,7 @@ import NumberWidget from "./NumberWidget.vue";
 import ReadonlyWidget from "./ReadonlyWidget.vue";
 import TextWidget from "./TextWidget.vue";
 
-const byTypeId = new Map<string, Component>();
+const byTypeId = new Map<string, Map<string, Component>>();
 const byComponentId = new Map<string, Component>();
 
 const genericByKind: Record<TypeWidgetSpec["kind"], Component> = {
@@ -17,12 +17,44 @@ const genericByKind: Record<TypeWidgetSpec["kind"], Component> = {
   custom: TextWidget,
 };
 
+function widgetsForType(typeId: string): Map<string, Component> {
+  let widgets = byTypeId.get(typeId);
+  if (!widgets) {
+    widgets = new Map();
+    byTypeId.set(typeId, widgets);
+  }
+  return widgets;
+}
+
+function resolveWidgetId(
+  typeDef: PortTypeDefinition | undefined,
+  port?: Port,
+): string {
+  return port?.widgetId ?? typeDef?.defaultWidget ?? "default";
+}
+
 /**
- * Bind a Vue component to all editable ports of a type id.
- * Overrides the generic widget for that type.
+ * Bind a Vue component to editable ports of a type id (default widget slot).
  */
-export function registerTypeWidget(typeId: string, component: Component): void {
-  byTypeId.set(typeId, component);
+export function registerTypeWidget(typeId: string, component: Component): void;
+/**
+ * Bind a Vue component to a named widget slot for a type id.
+ */
+export function registerTypeWidget(
+  typeId: string,
+  widgetId: string,
+  component: Component,
+): void;
+export function registerTypeWidget(
+  typeId: string,
+  widgetIdOrComponent: string | Component,
+  maybeComponent?: Component,
+): void {
+  if (typeof widgetIdOrComponent === "string") {
+    widgetsForType(typeId).set(widgetIdOrComponent, maybeComponent!);
+    return;
+  }
+  widgetsForType(typeId).set("default", widgetIdOrComponent);
 }
 
 /**
@@ -47,10 +79,16 @@ export function resolveTypeWidget(
   const typeId = port?.type ?? typeDef?.id;
   const alignedTypeDef =
     typeDef && typeDef.id === typeId ? typeDef : undefined;
+  const widgetId = resolveWidgetId(alignedTypeDef, port);
 
-  if (typeId && byTypeId.has(typeId)) {
-    return byTypeId.get(typeId)!;
+  const registered = typeId ? byTypeId.get(typeId) : undefined;
+  if (registered?.has(widgetId)) {
+    return registered.get(widgetId)!;
   }
+  if (registered?.has("default")) {
+    return registered.get("default")!;
+  }
+
   if (effectiveWidget?.kind === "custom") {
     return byComponentId.get(effectiveWidget.componentId) ?? TextWidget;
   }

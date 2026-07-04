@@ -63,7 +63,11 @@ export interface PortTypeDefinition {
   accepts?: (from: PortTypeId) => boolean;
   /** Fallback when a port of this type omits its own default. */
   defaultValue?: unknown;
-  /** Display/edit descriptor for the viewer (no functions). */
+  /** Named widget variants for this type. */
+  widgets?: Record<string, TypeWidgetSpec>;
+  /** Key into {@link widgets}; defaults to `"default"`. */
+  defaultWidget?: string;
+  /** Legacy single-widget descriptor; normalized to {@link widgets}.default. */
   widget?: TypeWidgetSpec;
   /** Parse a raw string (e.g. from an input field) into a value. */
   parse?: (raw: string) => unknown;
@@ -71,6 +75,8 @@ export interface PortTypeDefinition {
   format?: (value: unknown) => string;
   /** Normalize or clamp a value after edit or connection. */
   coerce?: (value: unknown) => unknown;
+  /** Pack registration priority override (not used at runtime). */
+  priority?: number;
 }
 
 /** Library of available data types, keyed by id. */
@@ -85,7 +91,13 @@ export type PortDirection = "input" | "output";
 export type PortDefinition = {
   /** Stable, human-authored key; referenced inside `execute()`. */
   name: string;
+  /** Primary/display type (color, labels). Must appear in {@link types} when set. */
   type: PortType;
+  /**
+   * Accepted types for this port. When length > 1, the port is connection-only
+   * (no inline editor when disconnected).
+   */
+  types?: PortTypeId[];
   /** Used by an input when nothing is connected to it. */
   defaultValue?: unknown;
   description?: string;
@@ -99,6 +111,8 @@ export type PortDefinition = {
    * values as an unordered array of `type`.
    */
   multi?: boolean;
+  /** Named widget variant from the port type's {@link PortTypeDefinition.widgets}. */
+  widgetId?: string;
   /**
    * Widget-specific configuration merged on top of the type's widget spec.
    * Recognized keys: `options`, `min`, `max`, `step`, `rows`, `rowHeight`.
@@ -115,11 +129,13 @@ export type Port = {
   /** Matches the {@link PortDefinition.name} it came from. */
   name: string;
   type: PortType;
+  types?: PortTypeId[];
   direction: PortDirection;
   /** Input: value when disconnected. Output: optional cache of last computed value. */
   value?: unknown;
   userOnly?: boolean;
   multi?: boolean;
+  widgetId?: string;
   customProps?: Record<string, unknown>;
 };
 
@@ -274,6 +290,12 @@ export interface GraphDocument {
 /** Library of available node types, keyed by {@link NodeTypeId}. */
 export type NodeRegistry = Record<NodeTypeId, IndefiniteNode>;
 
+/** Tracks which pack registered each type/node id and at what priority. */
+export type RegistrationMeta = {
+  types: Record<PortTypeId, { packId: string; priority: number }>;
+  nodeTypes: Record<NodeTypeId, { packId: string; priority: number }>;
+};
+
 /** In-memory workspace: serializable graph plus runtime type and node registries. */
 export interface NodeMap {
   graph: NodeGraph;
@@ -282,6 +304,8 @@ export interface NodeMap {
   /** Ids of packs loaded via {@link NodeMap.loadPack}. */
   extensions: string[];
   graphInterface: GraphInterface;
+  /** Ownership metadata for types and node types registered via packs. */
+  registrationMeta: RegistrationMeta;
   /**
    * Register types, nodes, and optional widget setup from a pack.
    * @returns Registration errors (empty array on success).

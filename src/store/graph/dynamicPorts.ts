@@ -55,8 +55,10 @@ export function reconcileSide(
     if (existing) {
       // Keep id/value/identity; refresh the type-derived fields.
       existing.type = d.type;
+      existing.types = d.types;
       existing.userOnly = d.userOnly;
       existing.multi = d.multi;
+      existing.widgetId = d.widgetId;
       existing.customProps = d.customProps;
       next[existing.id] = existing;
     } else {
@@ -65,10 +67,12 @@ export function reconcileSide(
         id,
         name: d.name,
         type: d.type,
+        types: d.types,
         direction,
         value: undefined,
         userOnly: d.userOnly,
         multi: d.multi,
+        widgetId: d.widgetId,
         customProps: d.customProps,
       };
     }

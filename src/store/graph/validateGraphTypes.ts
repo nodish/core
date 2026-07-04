@@ -1,4 +1,5 @@
 import type { DefiniteNode, NodeGraph, NodeMap, Port } from "../model";
+import { portTypes } from "./portTypes";
 
 function checkPortTypes(
   map: NodeMap,
@@ -7,10 +8,12 @@ function checkPortTypes(
   side: "input" | "output",
   errors: string[],
 ): void {
-  if (!map.types[port.type]) {
-    errors.push(
-      `node "${node.label ?? node.typeId}" (${node.id}): unknown ${side} port type "${port.type}" on port "${port.name}"`,
-    );
+  for (const typeId of portTypes(port)) {
+    if (!map.types[typeId]) {
+      errors.push(
+        `node "${node.label ?? node.typeId}" (${node.id}): unknown ${side} port type "${typeId}" on port "${port.name}"`,
+      );
+    }
   }
 }
 

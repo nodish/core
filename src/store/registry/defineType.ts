@@ -17,8 +17,14 @@ export interface TypeSpec {
   accepts?: (from: PortTypeId) => boolean;
   /** Fallback when a port of this type omits its own default. */
   defaultValue?: unknown;
-  /** Viewer widget descriptor for ports of this type. */
+  /** Named widget variants for ports of this type. */
+  widgets?: Record<string, TypeWidgetSpec>;
+  /** Key into {@link widgets}; defaults to `"default"`. */
+  defaultWidget?: string;
+  /** Legacy single-widget descriptor; normalized to {@link widgets}.default. */
   widget?: TypeWidgetSpec;
+  /** Override pack priority when registering this type from a {@link NodePack}. */
+  priority?: number;
   /** Override default parse behaviour for this type's widget. */
   parse?: (raw: string) => unknown;
   /** Override default format behaviour for this type's widget. */
@@ -27,11 +33,35 @@ export interface TypeSpec {
   coerce?: (value: unknown) => unknown;
 }
 
+function normalizeWidgets(
+  spec: TypeSpec,
+): Pick<PortTypeDefinition, "widgets" | "defaultWidget" | "widget"> {
+  if (spec.widgets) {
+    const keys = Object.keys(spec.widgets);
+    const defaultWidget =
+      spec.defaultWidget ?? (keys.length === 1 ? keys[0]! : "default");
+    return {
+      widgets: spec.widgets,
+      defaultWidget,
+      widget: spec.widgets[defaultWidget] ?? spec.widget,
+    };
+  }
+  if (spec.widget) {
+    return {
+      widgets: { default: spec.widget },
+      defaultWidget: "default",
+      widget: spec.widget,
+    };
+  }
+  return {};
+}
+
 /**
  * Turn a {@link TypeSpec} into a complete {@link PortTypeDefinition}.
  */
 export function defineType(spec: TypeSpec): PortTypeDefinition {
-  const widget = spec.widget;
+  const widgetFields = normalizeWidgets(spec);
+  const widget = widgetFields.widget;
   const auto = defaultsForWidget(widget);
   return {
     id: spec.id,
@@ -40,7 +70,8 @@ export function defineType(spec: TypeSpec): PortTypeDefinition {
     validate: spec.validate,
     accepts: spec.accepts,
     defaultValue: spec.defaultValue,
-    widget,
+    priority: spec.priority,
+    ...widgetFields,
     parse: spec.parse ?? auto.parse,
     format: spec.format ?? auto.format,
     coerce: spec.coerce ?? auto.coerce,

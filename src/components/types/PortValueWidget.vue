@@ -38,9 +38,12 @@ const widget = computed(() =>
 const widgetKey = computed(() => {
   const w = widgetSpec.value;
   const portType = props.port.type;
+  const widgetId = props.port.widgetId ?? "default";
   if (props.mode === "readonly") return `readonly:${portType}`;
-  if (w?.kind === "custom") return `${portType}:custom:${w.componentId}`;
-  return `${portType}:${w?.kind ?? "text"}`;
+  if (w?.kind === "custom") {
+    return `${portType}:${widgetId}:custom:${w.componentId}`;
+  }
+  return `${portType}:${widgetId}:${w?.kind ?? "text"}`;
 });
 </script>
 

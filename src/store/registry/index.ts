@@ -18,6 +18,8 @@ import {
 export interface NodePack {
   /** Unique pack id (e.g. `"@my-org/my-pack"`). Recorded in {@link GraphDocument.extensions}. */
   id: string;
+  /** Default priority for all types and nodes in this pack (default 0). */
+  priority?: number;
   /** Custom {@link PortTypeDefinition}s to register. */
   types?: TypeRegistry;
   /** Custom node definitions to register (authoring form). */
@@ -32,10 +34,12 @@ export interface NodePack {
 /** Context passed to {@link NodePack.setup} for widget registration. */
 export interface PackSetupContext {
   /**
-   * Bind a Vue component to all editable ports of a type id.
-   * Overrides the generic widget for that type.
+   * Bind a Vue component to all editable ports of a type id (default widget slot).
    */
-  registerTypeWidget: (typeId: string, component: Component) => void;
+  registerTypeWidget: {
+    (typeId: string, component: Component): void;
+    (typeId: string, widgetId: string, component: Component): void;
+  };
   /**
    * Bind a Vue component to a custom widget id
    * ({@link TypeWidgetSpec} `kind: "custom"`).
@@ -57,10 +61,8 @@ export function registerNodeTypes(
   }
 }
 
-// Merge a node pack into the runtime registries and record its id.
+// Record a pack id after its types and nodes have been registered.
 export function registerNodePack(map: NodeMap, pack: NodePack): void {
-  if (pack.types) registerTypes(map, pack.types);
-  if (pack.nodeTypes) registerNodeTypes(map, pack.nodeTypes);
   if (!map.extensions.includes(pack.id)) {
     map.extensions.push(pack.id);
   }

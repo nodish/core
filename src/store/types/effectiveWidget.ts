@@ -16,13 +16,25 @@ function alignedTypeDef(
   return typeDef;
 }
 
+function resolveWidgetSpec(
+  typeDef: PortTypeDefinition,
+  port: Port,
+): TypeWidgetSpec | undefined {
+  const widgetId = port.widgetId ?? typeDef.defaultWidget ?? "default";
+  const fromMap = typeDef.widgets?.[widgetId];
+  if (fromMap) return fromMap;
+  if (typeDef.widgets?.default) return typeDef.widgets.default;
+  return typeDef.widget;
+}
+
 // Merge a port's customProps onto the type's widget spec.
 // Recognized port.customProps overrides: min, max, step, rows, rowHeight.
 export function effectiveWidget(
   typeDef: PortTypeDefinition | undefined,
   port: Port,
 ): TypeWidgetSpec | undefined {
-  const base = alignedTypeDef(typeDef, port)?.widget;
+  const aligned = alignedTypeDef(typeDef, port);
+  const base = aligned ? resolveWidgetSpec(aligned, port) : undefined;
   const overrides = port.customProps;
   if (!base && !overrides) return undefined;
 

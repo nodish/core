@@ -37,6 +37,7 @@ export function createNodeMapBase(init: CreateNodeMapInit = {}): NodeMap {
     nodeTypes: {},
     extensions: init.extensions ? [...init.extensions] : [],
     graphInterface: clonePlain(init.graphInterface ?? defaultGraphInterface),
+    registrationMeta: { types: {}, nodeTypes: {} },
     loadPack: () => [],
   };
 

@@ -9,6 +9,12 @@ export type {
 export { defineType } from "../store/registry/defineType";
 export type { TypeSpec } from "../store/registry/defineType";
 
+export {
+  isConnectionOnly,
+  isUnionPort,
+  portTypes,
+} from "../store/graph/portTypes";
+
 export type { NodePack, PackSetupContext } from "../store/registry";
 
 export type {

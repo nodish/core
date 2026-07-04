@@ -16,10 +16,12 @@ function materialize(io: NodeIODefinition, direction: PortDirection): NodeIO {
       id,
       name: def.name,
       type: def.type,
+      types: def.types,
       direction,
       value: def.userOnly ? def.defaultValue : undefined,
       userOnly: def.userOnly,
       multi: def.multi,
+      widgetId: def.widgetId,
       customProps: def.customProps,
     };
   }

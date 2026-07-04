@@ -2,9 +2,11 @@ import type {
   Connection,
   NodeId,
   NodeMap,
+  Port,
   PortRef,
   PortTypeId,
 } from "../model";
+import { portTypes } from "./portTypes";
 
 // Can a value of type `from` flow into a port of type `to`? The destination
 // type decides (via its `accepts`), defaulting to strict identity.
@@ -17,6 +19,15 @@ export function assignable(
   if (!toDef) return from === to;
   if (toDef.accepts) return toDef.accepts(from);
   return from === to;
+}
+
+/** Whether `from` may connect into `toPort` (any of its accepted types). */
+export function portAccepts(
+  map: NodeMap,
+  from: PortTypeId,
+  toPort: Port,
+): boolean {
+  return portTypes(toPort).some((t) => assignable(map, from, t));
 }
 
 // Every upstream node that can reach `nodeId` via existing output->input wires.
@@ -77,7 +88,7 @@ export function canConnect(map: NodeMap, from: PortRef, to: PortRef): boolean {
   if (!fromPort || !toPort) return false;
   if (toPort.userOnly) return false; // user-only inputs reject all wires
   if (wouldCreateCycle(map, from, to)) return false;
-  return assignable(map, fromPort.type, toPort.type);
+  return portAccepts(map, fromPort.type, toPort);
 }
 
 // Add an output->input connection. A normal input keeps a single incoming wire

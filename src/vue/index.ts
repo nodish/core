@@ -20,6 +20,14 @@ export {
 
 export { instantiate } from "../store/graph/instance";
 
+export { assignable, portAccepts } from "../store/graph/connect";
+
+export {
+  isConnectionOnly,
+  isUnionPort,
+  portTypes,
+} from "../store/graph/portTypes";
+
 export { boundaryNodes, INPUT_TYPE, OUTPUT_TYPE } from "../store/nodes/io";
 
 export {
@@ -43,6 +51,7 @@ export type {
   PortRef,
   PortTypeDefinition,
   PortTypeId,
+  RegistrationMeta,
   TypeRegistry,
 } from "../store/model";
 

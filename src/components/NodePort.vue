@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { Port, PortTypeDefinition } from "../store/model";
+import { isConnectionOnly } from "../store/graph/portTypes";
 import { effectiveWidget } from "../store/types/effectiveWidget";
 import PortValueWidget from "./types/PortValueWidget.vue";
 import { NODE_FONT_SIZE, portRowHeight } from "./layout";
@@ -43,12 +44,13 @@ const placeholder = computed(() => {
 
 const showEditable = computed(
   () =>
-    props.widgetMode === "editable" ||
-    (props.side === "in" && !!props.port.userOnly) ||
-    (props.widgetMode === "auto" &&
-      props.side === "in" &&
-      !props.connected &&
-      !props.port.multi),
+    !isConnectionOnly(props.port) &&
+    (props.widgetMode === "editable" ||
+      (props.side === "in" && !!props.port.userOnly) ||
+      (props.widgetMode === "auto" &&
+        props.side === "in" &&
+        !props.connected &&
+        !props.port.multi)),
 );
 
 const showReadonly = computed(() => props.widgetMode === "readonly");

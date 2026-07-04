@@ -53,6 +53,8 @@ export interface NodeSpec {
    * act as initial defaults when present.
    */
   resolvePorts?: DynamicPortsSpec;
+  /** Override pack priority when registering this node from a {@link NodePack}. */
+  priority?: number;
 }
 
 /** Node types in authoring form, keyed by {@link NodeTypeId}. */

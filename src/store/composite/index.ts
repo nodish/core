@@ -47,6 +47,7 @@ export function buildNestedMap(
     types: parent.types,
     nodeTypes: { ...parent.nodeTypes },
     extensions: parent.extensions,
+    registrationMeta: parent.registrationMeta,
     loadPack: (pack) => parent.loadPack(pack),
   };
   applyGraphInterface(map, state.interface);
@@ -125,6 +126,7 @@ function initNestedState(
     types: parent.types,
     nodeTypes: { ...parent.nodeTypes },
     extensions: parent.extensions,
+    registrationMeta: parent.registrationMeta,
     loadPack: (pack) => parent.loadPack(pack),
   };
   applyGraphInterface(nested, nested.graphInterface);
