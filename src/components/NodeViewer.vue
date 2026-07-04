@@ -10,6 +10,11 @@ import {
 } from "../store/graph/connect";
 import { removeNode, canRemoveNode } from "../store/graph/removeNode";
 import {
+  buildClipboard,
+  pasteClipboard,
+  type ClipboardPayload,
+} from "../store/graph/duplicateSelection";
+import {
   bringToFront,
   ensureStackingOrder,
   normalizeStackingOrder,
@@ -161,6 +166,8 @@ const panX = ref(0);
 const panY = ref(0);
 const zoom = ref(1);
 const isPanning = ref(false);
+const worldCursor = ref<Point>({ x: 0, y: 0 });
+const clipboard = ref<ClipboardPayload | null>(null);
 
 // ---- Selection ---------------------------------------------------------
 const selectedIds = ref<string[]>([]);
@@ -546,6 +553,17 @@ function resetView() {
 
 defineExpose({ resetView });
 
+function isEditingField(e: KeyboardEvent): boolean {
+  const el = e.target;
+  return (
+    el instanceof HTMLElement && !!el.closest("input, textarea, select")
+  );
+}
+
+function onViewerPointerMove(e: PointerEvent) {
+  worldCursor.value = toWorld(e.clientX, e.clientY);
+}
+
 function onKeyDown(e: KeyboardEvent) {
   if (e.key === "Escape") {
     if (menu.value) menu.value = null;
@@ -554,10 +572,36 @@ function onKeyDown(e: KeyboardEvent) {
     else recenter();
     return;
   }
-  if (e.key !== "Delete" && e.key !== "Backspace") return;
-  const el = e.target;
-  if (el instanceof HTMLElement && el.closest("input, textarea, select"))
+
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key === "c") {
+    if (isEditingField(e)) return;
+    const payload = buildClipboard(
+      selectedNodes.value,
+      activeMap.value.graph.connections,
+      worldCursor.value,
+    );
+    if (payload) clipboard.value = payload;
+    e.preventDefault();
     return;
+  }
+  if (mod && e.key === "v") {
+    if (isEditingField(e)) return;
+    if (!clipboard.value) return;
+    const newIds = pasteClipboard(
+      activeMap.value,
+      clipboard.value,
+      worldCursor.value,
+    );
+    ensureStackingOrder(activeMap.value);
+    for (const id of newIds) bringToFront(activeMap.value, id);
+    selectedIds.value = newIds;
+    e.preventDefault();
+    return;
+  }
+
+  if (e.key !== "Delete" && e.key !== "Backspace") return;
+  if (isEditingField(e)) return;
   if (!selectedIds.value.length) return;
   for (const id of selectedIds.value) {
     if (canRemoveNode(activeMap.value, id)) removeNode(activeMap.value, id);
@@ -656,6 +700,7 @@ onUnmounted(() => {
     :class="{ panning: isPanning }"
     @wheel="onWheel"
     @pointerdown="onPointerDown"
+    @pointermove="onViewerPointerMove"
     @contextmenu.prevent
   >
     <div class="top-right-stack" @pointerdown.stop>

@@ -20,6 +20,12 @@ export {
 
 export { instantiate } from "../store/graph/instance";
 
+export {
+  buildClipboard,
+  pasteClipboard,
+  type ClipboardPayload,
+} from "../store/graph/duplicateSelection";
+
 export { assignable, portAccepts } from "../store/graph/connect";
 
 export {
