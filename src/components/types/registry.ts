@@ -80,8 +80,7 @@ export function resolveTypeWidget(
   if (mode === "readonly") return ReadonlyWidget;
 
   const typeId = port?.type ?? typeDef?.id;
-  const alignedTypeDef =
-    typeDef && typeDef.id === typeId ? typeDef : undefined;
+  const alignedTypeDef = typeDef && typeDef.id === typeId ? typeDef : undefined;
   const widgetId = resolveWidgetId(alignedTypeDef, port);
 
   const registered = typeId ? byTypeId.get(typeId) : undefined;
@@ -102,9 +101,7 @@ export function resolveTypeWidget(
     return genericByKind[effectiveWidget.kind] ?? TextWidget;
   }
   if (alignedTypeDef?.widget?.kind === "custom") {
-    return (
-      byComponentId.get(alignedTypeDef.widget.componentId) ?? TextWidget
-    );
+    return byComponentId.get(alignedTypeDef.widget.componentId) ?? TextWidget;
   }
   if (alignedTypeDef?.widget?.kind && alignedTypeDef.widget.kind !== "none") {
     return genericByKind[alignedTypeDef.widget.kind] ?? TextWidget;

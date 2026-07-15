@@ -21,15 +21,16 @@ export function isUnionPort(
 }
 
 /**
- * Ports with no inline editor when disconnected: unions, explicit
+ * Ports with no inline editor when disconnected: explicit
  * {@link Port.connectionOnly}, or type widget `kind: "none"`.
+ * Union ports may show a widget for the primary {@link Port.type} unless
+ * marked connection-only.
  */
 export function isConnectionOnly(
   port: Pick<Port | PortDefinition, "type" | "types" | "connectionOnly">,
   typeDef?: PortTypeDefinition,
 ): boolean {
   if (port.connectionOnly) return true;
-  if (isUnionPort(port)) return true;
   if (typeDef && effectiveWidget(typeDef, port as Port)?.kind === "none") {
     return true;
   }

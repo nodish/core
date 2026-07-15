@@ -171,6 +171,11 @@ function onRename(oldName: string, newName: string) {
   });
 }
 
+function optionsFor(currentType: string): string[] {
+  if (props.typeIds.includes(currentType)) return props.typeIds;
+  return [...props.typeIds, currentType].sort((a, b) => a.localeCompare(b));
+}
+
 function onTypeChange(name: string, type: string) {
   run((iface) => {
     if (isParameters.value) {
@@ -231,7 +236,11 @@ function onTypeChange(name: string, type: string) {
               onTypeChange(row.name, ($event.target as HTMLSelectElement).value)
             "
           >
-            <option v-for="tid in typeIds" :key="tid" :value="tid">
+            <option
+              v-for="tid in optionsFor(row.spec.type)"
+              :key="tid"
+              :value="tid"
+            >
               {{ tid }}
             </option>
           </select>

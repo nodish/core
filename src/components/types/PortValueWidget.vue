@@ -22,17 +22,10 @@ const emit = defineEmits<{
   commit: [];
 }>();
 
-const widgetSpec = computed(() =>
-  effectiveWidget(props.typeDef, props.port),
-);
+const widgetSpec = computed(() => effectiveWidget(props.typeDef, props.port));
 
 const widget = computed(() =>
-  resolveTypeWidget(
-    props.typeDef,
-    widgetSpec.value,
-    props.mode,
-    props.port,
-  ),
+  resolveTypeWidget(props.typeDef, widgetSpec.value, props.mode, props.port),
 );
 
 const widgetKey = computed(() => {

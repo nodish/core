@@ -44,7 +44,9 @@ const interfaceMode = computed<"parameters" | "returns" | null>(() => {
 });
 
 const typeIds = computed(() =>
-  Object.keys(props.map.types).sort((a, b) => a.localeCompare(b)),
+  Object.keys(props.map.types)
+    .filter((id) => !props.map.types[id]?.hidden)
+    .sort((a, b) => a.localeCompare(b)),
 );
 
 const labelPlaceholder = computed(

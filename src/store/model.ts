@@ -82,6 +82,11 @@ export interface PortTypeDefinition {
   coerce?: (value: unknown) => unknown;
   /** Pack registration priority override (not used at runtime). */
   priority?: number;
+  /**
+   * When true, this type is omitted from the GraphInterface type picker
+   * (and its default widget is not offered for new interface ports).
+   */
+  hidden?: boolean;
 }
 
 /** Library of available data types, keyed by id. */
@@ -99,8 +104,9 @@ export type PortDefinition = {
   /** Primary/display type (color, labels). Must appear in {@link types} when set. */
   type: PortType;
   /**
-   * Accepted types for this port. When length > 1, the port is connection-only
-   * (no inline editor when disconnected).
+   * Accepted types for this port. When length > 1, the port is a union.
+   * The inline widget (if any) still edits the primary {@link type}; set
+   * {@link connectionOnly} for wire-only unions with no editor.
    */
   types?: PortTypeId[];
   /** Used by an input when nothing is connected to it. */

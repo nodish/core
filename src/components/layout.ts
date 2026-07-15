@@ -1,9 +1,8 @@
-import type {
-  DefiniteNode,
-  Port,
-  PortTypeDefinition,
-} from "../store/model";
-import { effectiveWidget, widgetRowHeight } from "../store/types/effectiveWidget";
+import type { DefiniteNode, Port, PortTypeDefinition } from "../store/model";
+import {
+  effectiveWidget,
+  widgetRowHeight,
+} from "../store/types/effectiveWidget";
 
 // Layout constants - shared by the node DOM and the wire math so sockets and
 // wire endpoints always line up.
@@ -17,9 +16,7 @@ export const ROW_MAX_H = 240;
 export const NODE_FONT_SIZE = 11;
 export const NODE_PADDING_X = 6;
 
-export type PortTypeLookup = (
-  port: Port,
-) => PortTypeDefinition | undefined;
+export type PortTypeLookup = (port: Port) => PortTypeDefinition | undefined;
 
 function clampRowHeight(h: number): number {
   return Math.max(ROW_MIN_H, Math.min(ROW_MAX_H, h));
@@ -38,10 +35,7 @@ export function portRowHeight(
   return clampRowHeight(widgetRowHeight(widget, ROW_H));
 }
 
-function columnBodyHeight(
-  ports: Port[],
-  lookup?: PortTypeLookup,
-): number {
+function columnBodyHeight(ports: Port[], lookup?: PortTypeLookup): number {
   let sum = 0;
   for (const port of ports) {
     sum += portRowHeight(port, lookup?.(port));

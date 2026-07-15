@@ -555,9 +555,7 @@ defineExpose({ resetView });
 
 function isEditingField(e: KeyboardEvent): boolean {
   const el = e.target;
-  return (
-    el instanceof HTMLElement && !!el.closest("input, textarea, select")
-  );
+  return el instanceof HTMLElement && !!el.closest("input, textarea, select");
 }
 
 function onViewerPointerMove(e: PointerEvent) {

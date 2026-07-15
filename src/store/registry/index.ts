@@ -6,10 +6,7 @@ import type {
   TypeRegistry,
   TypeWidgetSpec,
 } from "../model";
-import {
-  type NodeSpecRegistry,
-  normalizeNode,
-} from "./defineNode";
+import { type NodeSpecRegistry, normalizeNode } from "./defineNode";
 
 /**
  * A publishable bundle of custom types and/or node types (npm package contents).

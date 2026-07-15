@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { DefiniteNode, NodeMap } from "../store/model";
-import {
-  portPosition,
-  type PortTypeLookup,
-  wirePath,
-} from "./layout";
+import { portPosition, type PortTypeLookup, wirePath } from "./layout";
 
 const props = defineProps<{
   map: NodeMap;

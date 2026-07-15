@@ -49,7 +49,9 @@ function remapNestedGraph(
   const nodes = graph.nodes.map((n) =>
     remapNodeTree(n, nodeIdMap, portIdMap, null),
   );
-  const connections = graph.connections.map((c) => remapConnection(c, nodeIdMap, portIdMap));
+  const connections = graph.connections.map((c) =>
+    remapConnection(c, nodeIdMap, portIdMap),
+  );
   return { nodes, connections };
 }
 

@@ -21,11 +21,7 @@ function onChange(ev: Event) {
 
 <template>
   <label class="bool" :title="port.name" @pointerdown.stop>
-    <input
-      type="checkbox"
-      :checked="port.value === true"
-      @change="onChange"
-    />
+    <input type="checkbox" :checked="port.value === true" @change="onChange" />
     <span class="label">{{ port.name }}</span>
   </label>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Port, PortTypeDefinition } from "../store/model";
-import { isConnectionOnly } from "../store/graph/portTypes";
+import type { Port, PortTypeDefinition, TypeRegistry } from "../store/model";
+import { isConnectionOnly, portTypes } from "../store/graph/portTypes";
 import { effectiveWidget } from "../store/types/effectiveWidget";
 import PortValueWidget from "./types/PortValueWidget.vue";
 import { NODE_FONT_SIZE, portRowHeight } from "./layout";
@@ -12,6 +12,8 @@ const props = withDefaults(
   defineProps<{
     port: Port;
     typeDef?: PortTypeDefinition;
+    /** Type registry used for hover labels of accepted types. */
+    types?: TypeRegistry;
     color: string;
     side: "in" | "out";
     connected?: boolean;
@@ -31,15 +33,24 @@ function onSocketDown(ev: PointerEvent) {
   emit("connectStart", props.port, ev);
 }
 
-const rowHeightPx = computed(() =>
-  portRowHeight(props.port, props.typeDef),
-);
+const rowHeightPx = computed(() => portRowHeight(props.port, props.typeDef));
 
 const widget = computed(() => effectiveWidget(props.typeDef, props.port));
 
 const placeholder = computed(() => {
   const label = props.typeDef?.label ?? props.port.type;
   return `${props.port.name} (${label})`;
+});
+
+const acceptedTypeLabels = computed(() =>
+  portTypes(props.port).map(
+    (id) => props.types?.[id]?.label ?? props.typeDef?.label ?? id,
+  ),
+);
+
+const socketTitle = computed(() => {
+  const types = acceptedTypeLabels.value.join(", ");
+  return `${props.port.name} - ${types}`;
 });
 
 const showEditable = computed(
@@ -91,7 +102,7 @@ function onCommit() {
       class="socket"
       :class="{ multi: port.multi }"
       :style="{ background: color }"
-      :title="port.multi ? `${port.name} (accepts many)` : port.name"
+      :title="socketTitle"
       @pointerdown.stop="onSocketDown"
     />
 
@@ -107,12 +118,13 @@ function onCommit() {
       @update:value="onValueUpdate"
       @commit="onCommit"
     />
-    <span v-else class="label">{{ port.name }}</span>
+    <span v-else class="label" :title="socketTitle">{{ port.name }}</span>
 
     <span
       v-if="side === 'out'"
       class="socket"
       :style="{ background: color }"
+      :title="socketTitle"
       @pointerdown.stop="onSocketDown"
     />
   </div>
