@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject } from "vue";
 import type {
   DefiniteNode,
   GraphInterface,
@@ -14,9 +14,13 @@ import InspectorError from "./inspector/InspectorError.vue";
 import InspectorPositionField from "./inspector/InspectorPositionField.vue";
 import InspectorWidthField from "./inspector/InspectorWidthField.vue";
 import type { InterfaceMutator } from "../store/interface/editor";
+import { graphHistoryKey, rootMapKey } from "./historyKey";
 import { NODE_MAX_WIDTH, NODE_MIN_WIDTH, NODE_WIDTH } from "./layout";
 
 const HEADER_COLOR = "#3a3f4b";
+
+const history = inject(graphHistoryKey, null);
+const rootMap = inject(rootMapKey, null);
 
 const props = defineProps<{
   map: NodeMap;
@@ -76,9 +80,14 @@ const avgY = computed(() => {
   return Math.round(sum / props.nodes.length);
 });
 
+function checkpoint() {
+  if (history && rootMap) history.pushBefore(rootMap.value);
+}
+
 function onTitleUpdate(value: string) {
   const n = node.value;
   if (!n) return;
+  checkpoint();
   n.label = value;
   emit("update:label", value);
 }
@@ -86,22 +95,26 @@ function onTitleUpdate(value: string) {
 function onColorUpdate(value: string) {
   const n = node.value;
   if (!n) return;
+  checkpoint();
   n.color = value;
 }
 
 function onWidthUpdate(value: number) {
   const n = node.value;
   if (!n) return;
+  checkpoint();
   n.width = value;
 }
 
 function onXUpdate(target: number) {
   const delta = target - avgX.value;
+  checkpoint();
   for (const n of props.nodes) n.location.x += delta;
 }
 
 function onYUpdate(target: number) {
   const delta = target - avgY.value;
+  checkpoint();
   for (const n of props.nodes) n.location.y += delta;
 }
 </script>

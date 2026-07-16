@@ -21,6 +21,12 @@ export {
 export { instantiate } from "../store/graph/instance";
 
 export {
+  createGraphHistory,
+  type GraphHistory,
+  type HistorySnapshot,
+} from "../store/graph/history";
+
+export {
   buildClipboard,
   pasteClipboard,
   type ClipboardPayload,

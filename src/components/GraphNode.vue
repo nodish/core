@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, nextTick } from "vue";
+import { computed, inject, nextTick } from "vue";
 import type { DefiniteNode, NodeMap, Port, PortRef } from "../store/model";
 import { INPUT_TYPE, OUTPUT_TYPE } from "../store/nodes/io";
 import type { Values } from "../store/graph/evaluate";
 import { reconcilePorts } from "../store/graph/dynamicPorts";
 import { isCompositeNode } from "../store/composite";
+import { graphHistoryKey, rootMapKey } from "./historyKey";
 import NodePort from "./NodePort.vue";
 import {
   HEADER_H,
@@ -18,6 +19,8 @@ import {
 const nodeFontSize = `${NODE_FONT_SIZE}px`;
 const nodePaddingX = `${NODE_PADDING_X}px`;
 
+const history = inject(graphHistoryKey, null);
+const rootMap = inject(rootMapKey, null);
 const props = withDefaults(
   defineProps<{
     node: DefiniteNode;
@@ -75,11 +78,6 @@ const width = computed(() => nodeWidth(props.node));
 const inputs = computed(() => Object.values(props.node.inputs));
 const outputs = computed(() => Object.values(props.node.outputs));
 
-// Output column only needs extra width when IO widgets sit on output ports.
-const outputColumnWide = computed(
-  () => props.ioWidgets && props.node.typeId === INPUT_TYPE,
-);
-
 const connectedInputs = computed(() => {
   const ids = new Set<string>();
   for (const c of props.map.graph.connections) {
@@ -123,6 +121,7 @@ function onHeaderPointerDown(ev: PointerEvent) {
   let origins: { node: DefiniteNode; x: number; y: number }[] | null = null;
 
   async function beginDrag() {
+    if (history && rootMap) history.begin(rootMap.value);
     if (!shiftKey && !props.selectedIds?.has(props.node.id)) {
       emit("select", props.node.id, false);
       await nextTick();
@@ -160,6 +159,7 @@ function onHeaderPointerDown(ev: PointerEvent) {
   function onUp() {
     window.removeEventListener("pointermove", onMove);
     window.removeEventListener("pointerup", onUp);
+    if (dragging) history?.end();
     if (!dragging) {
       emit("select", props.node.id, shiftKey);
     }
@@ -198,39 +198,31 @@ function onHeaderPointerDown(ev: PointerEvent) {
     </div>
 
     <div class="body">
-      <div v-if="inputs.length" class="col input">
-        <NodePort
-          v-for="port in inputs"
-          :key="port.id"
-          :port="port"
-          :type-def="typeDefFor(port)"
-          :types="map.types"
-          :color="portColor(port.type)"
-          side="in"
-          :connected="connectedInputs.has(port.id)"
-          :widget-mode="widgetMode('in')"
-          :display-value="ioResults?.[port.name]"
-          @connect-start="onConnectStart"
-          @value-change="onValueChange"
-        />
-      </div>
-      <div
-        v-if="outputs.length"
-        class="col output"
-        :class="{ wide: outputColumnWide }"
-      >
-        <NodePort
-          v-for="port in outputs"
-          :key="`${port.id}-${port.type}`"
-          :port="port"
-          :type-def="typeDefFor(port)"
-          :types="map.types"
-          :color="portColor(port.type)"
-          side="out"
-          :widget-mode="widgetMode('out')"
-          @connect-start="onConnectStart"
-        />
-      </div>
+      <NodePort
+        v-for="port in inputs"
+        :key="port.id"
+        :port="port"
+        :type-def="typeDefFor(port)"
+        :types="map.types"
+        :color="portColor(port.type)"
+        side="in"
+        :connected="connectedInputs.has(port.id)"
+        :widget-mode="widgetMode('in')"
+        :display-value="ioResults?.[port.name]"
+        @connect-start="onConnectStart"
+        @value-change="onValueChange"
+      />
+      <NodePort
+        v-for="port in outputs"
+        :key="`${port.id}-${port.type}`"
+        :port="port"
+        :type-def="typeDefFor(port)"
+        :types="map.types"
+        :color="portColor(port.type)"
+        side="out"
+        :widget-mode="widgetMode('out')"
+        @connect-start="onConnectStart"
+      />
     </div>
   </div>
 </template>
@@ -302,29 +294,7 @@ function onHeaderPointerDown(ev: PointerEvent) {
 }
 .body {
   display: flex;
-  gap: 6px;
-}
-.col {
-  display: flex;
   flex-direction: column;
   min-width: 0;
-}
-.body > .col:only-child {
-  flex: 1 1 0;
-}
-.body > .col.output:only-child {
-  padding-left: v-bind(nodePaddingX);
-}
-.body > .col.input:only-child {
-  padding-right: v-bind(nodePaddingX);
-}
-.input {
-  flex: 1 1 0;
-}
-.output {
-  flex: 0 0 auto;
-}
-.output.wide {
-  flex: 1 1 0;
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, provide, ref, toRef, watch } from "vue";
 import type { NodeMap, Port, PortRef } from "../store/model";
 import { runGraph } from "../store/graph/evaluate";
 import {
@@ -14,6 +14,7 @@ import {
   pasteClipboard,
   type ClipboardPayload,
 } from "../store/graph/duplicateSelection";
+import { createGraphHistory } from "../store/graph/history";
 import {
   bringToFront,
   ensureStackingOrder,
@@ -39,6 +40,7 @@ import {
   validateCompositeDrillIn,
   wouldCreateCompositeCycle,
 } from "../store/composite/guards";
+import { graphHistoryKey, rootMapKey } from "./historyKey";
 import GraphNode from "./GraphNode.vue";
 import WireLayer from "./WireLayer.vue";
 import NodePanel from "./NodePanel.vue";
@@ -79,6 +81,11 @@ const props = withDefaults(
   { ioWidgets: false },
 );
 
+const history = createGraphHistory();
+const rootMapRef = toRef(props, "map");
+provide(graphHistoryKey, history);
+provide(rootMapKey, rootMapRef);
+
 // ---- Drill-in edit stack ------------------------------------------------
 const editStack = ref<EditFrame[]>([]);
 const editContext = computed(() =>
@@ -112,6 +119,7 @@ function popUpOneLevel() {
 function applyInterfaceMutationFromViewer(mutate: InterfaceMutator): string[] {
   interfaceCommitError.value = "";
   try {
+    history.pushBefore(props.map);
     const errors = applyInterfaceMutation(props.map, editStack.value, mutate);
     if (errors.length) {
       interfaceCommitError.value = errors[0] ?? "Unknown error";
@@ -315,6 +323,7 @@ function onCreateNode(typeId: string) {
   }
   const def = activeMap.value.nodeTypes[typeId];
   if (def) {
+    history.pushBefore(props.map);
     const at = menu.value?.world ?? { x: 0, y: 0 };
     const node = instantiate(def, { x: at.x, y: at.y });
     activeMap.value.graph.nodes.push(node);
@@ -339,6 +348,7 @@ function onAddComposite() {
     menu.value = null;
     return;
   }
+  history.pushBefore(props.map);
   hostGraph.nodes.push(node);
   ensureStackingOrder(activeMap.value);
   onSelect(node.id, false);
@@ -442,6 +452,7 @@ function finishConnect() {
     if (target) {
       const from = p.dir === "output" ? p.ref : target;
       const to = p.dir === "output" ? target : p.ref;
+      history.pushBefore(props.map);
       addConnection(activeMap.value, from, to);
     }
   }
@@ -464,6 +475,7 @@ let rightPress: {
   onBackground: boolean;
 } | null = null;
 let rightMoved = false;
+let sliceHistoryStarted = false;
 
 const slicePath = computed(() => {
   const pts = slicePoints.value;
@@ -482,6 +494,7 @@ function startRightPress(ev: PointerEvent) {
     onBackground: !target?.closest(".node") && !target?.closest(".config-bar"),
   };
   rightMoved = false;
+  sliceHistoryStarted = false;
   slicePoints.value = [rightPress.world];
   window.addEventListener("pointermove", onSliceMove);
   window.addEventListener("pointerup", endSlice);
@@ -516,6 +529,10 @@ function sliceSegment(p1: Point, p2: Point) {
     const poly = sampleWire(a, b);
     for (let i = 0; i < poly.length - 1; i++) {
       if (segmentsIntersect(p1, p2, poly[i], poly[i + 1])) {
+        if (!sliceHistoryStarted) {
+          history.begin(props.map);
+          sliceHistoryStarted = true;
+        }
         removeConnection(activeMap.value, c.id);
         break;
       }
@@ -526,6 +543,8 @@ function sliceSegment(p1: Point, p2: Point) {
 function endSlice() {
   window.removeEventListener("pointermove", onSliceMove);
   window.removeEventListener("pointerup", endSlice);
+  if (sliceHistoryStarted) history.end();
+  sliceHistoryStarted = false;
   const press = rightPress;
   const moved = rightMoved;
   slicePoints.value = [];
@@ -558,6 +577,29 @@ function isEditingField(e: KeyboardEvent): boolean {
   return el instanceof HTMLElement && !!el.closest("input, textarea, select");
 }
 
+function pruneEditStack() {
+  let nodes = props.map.graph.nodes;
+  const next: EditFrame[] = [];
+  for (const frame of editStack.value) {
+    const node = nodes.find((n) => n.id === frame.compositeNodeId);
+    if (!node?.composite) break;
+    next.push(frame);
+    nodes = node.composite.graph.nodes;
+  }
+  if (next.length !== editStack.value.length) {
+    editStack.value = next;
+  }
+}
+
+function afterHistoryRestore() {
+  interfaceRevision.value++;
+  pruneEditStack();
+  const alive = new Set(activeMap.value.graph.nodes.map((n) => n.id));
+  selectedIds.value = selectedIds.value.filter((id) => alive.has(id));
+  ensureStackingOrder(activeMap.value);
+  menu.value = null;
+}
+
 function onViewerPointerMove(e: PointerEvent) {
   worldCursor.value = toWorld(e.clientX, e.clientY);
 }
@@ -572,6 +614,18 @@ function onKeyDown(e: KeyboardEvent) {
   }
 
   const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.key === "z" && !e.shiftKey) {
+    if (isEditingField(e)) return;
+    if (history.undo(props.map)) afterHistoryRestore();
+    e.preventDefault();
+    return;
+  }
+  if ((mod && e.key === "z" && e.shiftKey) || (mod && e.key === "y")) {
+    if (isEditingField(e)) return;
+    if (history.redo(props.map)) afterHistoryRestore();
+    e.preventDefault();
+    return;
+  }
   if (mod && e.key === "c") {
     if (isEditingField(e)) return;
     const payload = buildClipboard(
@@ -586,6 +640,7 @@ function onKeyDown(e: KeyboardEvent) {
   if (mod && e.key === "v") {
     if (isEditingField(e)) return;
     if (!clipboard.value) return;
+    history.pushBefore(props.map);
     const newIds = pasteClipboard(
       activeMap.value,
       clipboard.value,
@@ -601,9 +656,12 @@ function onKeyDown(e: KeyboardEvent) {
   if (e.key !== "Delete" && e.key !== "Backspace") return;
   if (isEditingField(e)) return;
   if (!selectedIds.value.length) return;
-  for (const id of selectedIds.value) {
-    if (canRemoveNode(activeMap.value, id)) removeNode(activeMap.value, id);
-  }
+  const removable = selectedIds.value.filter((id) =>
+    canRemoveNode(activeMap.value, id),
+  );
+  if (!removable.length) return;
+  history.pushBefore(props.map);
+  for (const id of removable) removeNode(activeMap.value, id);
   clearSelection();
   e.preventDefault();
 }

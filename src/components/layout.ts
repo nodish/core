@@ -35,7 +35,7 @@ export function portRowHeight(
   return clampRowHeight(widgetRowHeight(widget, ROW_H));
 }
 
-function columnBodyHeight(ports: Port[], lookup?: PortTypeLookup): number {
+function bodyPortsHeight(ports: Port[], lookup?: PortTypeLookup): number {
   let sum = 0;
   for (const port of ports) {
     sum += portRowHeight(port, lookup?.(port));
@@ -48,20 +48,24 @@ export function nodeWidth(node: DefiniteNode): number {
   return node.width ?? NODE_WIDTH;
 }
 
+/** Total port rows (inputs then outputs) in the vertical stack. */
 export function rowCount(node: DefiniteNode): number {
-  return Math.max(
-    Object.keys(node.inputs).length,
-    Object.keys(node.outputs).length,
-  );
+  return Object.keys(node.inputs).length + Object.keys(node.outputs).length;
+}
+
+/**
+ * Ports in display order: inputs top-to-bottom, then outputs.
+ * Matches the single vertical stack used by {@link GraphNode}.
+ */
+export function stackedPorts(node: DefiniteNode): Port[] {
+  return [...Object.values(node.inputs), ...Object.values(node.outputs)];
 }
 
 export function nodeHeight(
   node: DefiniteNode,
   lookup?: PortTypeLookup,
 ): number {
-  const inH = columnBodyHeight(Object.values(node.inputs), lookup);
-  const outH = columnBodyHeight(Object.values(node.outputs), lookup);
-  return HEADER_H + Math.max(inH, outH);
+  return HEADER_H + bodyPortsHeight(stackedPorts(node), lookup);
 }
 
 // Vertical center of the i-th port row at uniform ROW_H (legacy helper).
@@ -86,23 +90,22 @@ function portCenterY(
 export type Point = { x: number; y: number };
 
 // Absolute position (in viewer space) of a port on a node, for wire endpoints.
-// Inputs sit on the left edge, outputs on the right edge.
+// Inputs sit on the left edge, outputs on the right edge. Y follows the
+// vertical stack (all inputs, then all outputs).
 export function portPosition(
   node: DefiniteNode,
   portId: string,
   lookup?: PortTypeLookup,
 ): Point | null {
-  const inputs = Object.values(node.inputs);
-  const inY = portCenterY(inputs, portId, lookup);
-  if (inY !== null) {
-    return { x: node.location.x, y: node.location.y + inY };
+  const y = portCenterY(stackedPorts(node), portId, lookup);
+  if (y === null) return null;
+  if (node.inputs[portId]) {
+    return { x: node.location.x, y: node.location.y + y };
   }
-  const outputs = Object.values(node.outputs);
-  const outY = portCenterY(outputs, portId, lookup);
-  if (outY !== null) {
+  if (node.outputs[portId]) {
     return {
       x: node.location.x + nodeWidth(node),
-      y: node.location.y + outY,
+      y: node.location.y + y,
     };
   }
   return null;

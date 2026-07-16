@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, inject } from "vue";
 import type { Port, PortTypeDefinition, TypeRegistry } from "../store/model";
 import { isConnectionOnly, portTypes } from "../store/graph/portTypes";
 import { effectiveWidget } from "../store/types/effectiveWidget";
+import { graphHistoryKey, rootMapKey } from "./historyKey";
 import PortValueWidget from "./types/PortValueWidget.vue";
-import { NODE_FONT_SIZE, portRowHeight } from "./layout";
+import { NODE_FONT_SIZE, NODE_PADDING_X, portRowHeight } from "./layout";
 
 const fontSize = `${NODE_FONT_SIZE}px`;
+const padX = `${NODE_PADDING_X}px`;
 
+const history = inject(graphHistoryKey, null);
+const rootMap = inject(rootMapKey, null);
 const props = withDefaults(
   defineProps<{
     port: Port;
@@ -73,6 +77,7 @@ const valueMode = computed((): "editable" | "readonly" =>
 );
 
 function onValueUpdate(value: unknown) {
+  if (history && rootMap) history.begin(rootMap.value);
   props.port.value = value;
   emit("valueChange", props.port);
 }
@@ -82,6 +87,7 @@ function onCommit() {
     props.port.value = props.typeDef.coerce(props.port.value);
     emit("valueChange", props.port);
   }
+  history?.end();
 }
 </script>
 
@@ -136,6 +142,7 @@ function onCommit() {
   align-items: center;
   gap: 4px;
   box-sizing: border-box;
+  width: 100%;
   font-size: v-bind(fontSize);
   font-family: sans-serif;
 }
@@ -153,6 +160,13 @@ function onCommit() {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 0 v-bind(padX);
+}
+.port.in .label {
+  padding-left: 0;
+}
+.port.out .label {
+  padding-right: 0;
 }
 .socket {
   width: 7.5px;
@@ -168,11 +182,19 @@ function onCommit() {
 .socket.multi {
   border-radius: 0px;
 }
+.port.in {
+  padding-left: 0;
+  padding-right: v-bind(padX);
+}
 .port.in .socket {
   margin-left: -5px;
 }
 .port.in.no-socket {
   padding-left: 6.5px;
+}
+.port.out {
+  padding-left: v-bind(padX);
+  padding-right: 0;
 }
 .port.out .socket {
   margin-right: -5px;
