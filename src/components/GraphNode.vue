@@ -199,6 +199,17 @@ function onHeaderPointerDown(ev: PointerEvent) {
 
     <div class="body">
       <NodePort
+        v-for="port in outputs"
+        :key="`${port.id}-${port.type}`"
+        :port="port"
+        :type-def="typeDefFor(port)"
+        :types="map.types"
+        :color="portColor(port.type)"
+        side="out"
+        :widget-mode="widgetMode('out')"
+        @connect-start="onConnectStart"
+      />
+      <NodePort
         v-for="port in inputs"
         :key="port.id"
         :port="port"
@@ -211,17 +222,6 @@ function onHeaderPointerDown(ev: PointerEvent) {
         :display-value="ioResults?.[port.name]"
         @connect-start="onConnectStart"
         @value-change="onValueChange"
-      />
-      <NodePort
-        v-for="port in outputs"
-        :key="`${port.id}-${port.type}`"
-        :port="port"
-        :type-def="typeDefFor(port)"
-        :types="map.types"
-        :color="portColor(port.type)"
-        side="out"
-        :widget-mode="widgetMode('out')"
-        @connect-start="onConnectStart"
       />
     </div>
   </div>
