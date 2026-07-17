@@ -48,17 +48,17 @@ export function nodeWidth(node: DefiniteNode): number {
   return node.width ?? NODE_WIDTH;
 }
 
-/** Total port rows (inputs then outputs) in the vertical stack. */
+/** Total port rows (outputs then inputs) in the vertical stack. */
 export function rowCount(node: DefiniteNode): number {
-  return Object.keys(node.inputs).length + Object.keys(node.outputs).length;
+  return Object.keys(node.outputs).length + Object.keys(node.inputs).length;
 }
 
 /**
- * Ports in display order: inputs top-to-bottom, then outputs.
+ * Ports in display order: outputs top-to-bottom, then inputs.
  * Matches the single vertical stack used by {@link GraphNode}.
  */
 export function stackedPorts(node: DefiniteNode): Port[] {
-  return [...Object.values(node.inputs), ...Object.values(node.outputs)];
+  return [...Object.values(node.outputs), ...Object.values(node.inputs)];
 }
 
 export function nodeHeight(
@@ -91,7 +91,7 @@ export type Point = { x: number; y: number };
 
 // Absolute position (in viewer space) of a port on a node, for wire endpoints.
 // Inputs sit on the left edge, outputs on the right edge. Y follows the
-// vertical stack (all inputs, then all outputs).
+// vertical stack (all outputs, then all inputs).
 export function portPosition(
   node: DefiniteNode,
   portId: string,
