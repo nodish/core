@@ -6,15 +6,18 @@ import type {
   PortRef,
   PortTypeId,
 } from "../model";
+import { ANY_TYPE } from "../types/any";
 import { portTypes } from "./portTypes";
 
 // Can a value of type `from` flow into a port of type `to`? The destination
 // type decides (via its `accepts`), defaulting to strict identity.
+// Source `any` is assignable to every destination (runtime assert on unwrap).
 export function assignable(
   map: NodeMap,
   from: PortTypeId,
   to: PortTypeId,
 ): boolean {
+  if (from === ANY_TYPE) return true;
   const toDef = map.types[to];
   if (!toDef) return from === to;
   if (toDef.accepts) return toDef.accepts(from);

@@ -5,6 +5,7 @@ import {
   type PackSetupContext,
   registerNodePack,
 } from "../registry";
+import { syncAssertNodes } from "../nodes/assert";
 
 export type { NodePack, PackSetupContext } from "../registry";
 
@@ -114,6 +115,8 @@ export function installPack(
   }
 
   if (errors.length) return errors;
+
+  syncAssertNodes(map);
 
   registerNodePack(map, pack);
   if (setupCtx) {

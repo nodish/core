@@ -1,6 +1,12 @@
-import type { DefiniteNode, NodeId, NodeMap, PortRef } from "../model";
+import type { DefiniteNode, NodeId, NodeMap, Port, PortRef } from "../model";
 import { buildNestedMap, isCompositeNode } from "../composite";
 import { INPUT_TYPE, OUTPUT_TYPE } from "../nodes/io";
+import {
+  ANY_TYPE,
+  isAnyValue,
+  unwrapAny,
+  wrapAny,
+} from "../types/any";
 import { isConnectionOnly } from "./portTypes";
 
 /** Port values keyed by port name. */
@@ -25,6 +31,8 @@ function errorMessage(err: unknown): string {
  * ports (keyed by port name) and receive the Output node's input port values.
  *
  * Uses pull-based recursive evaluation with per-node memoization and cycle detection.
+ * Wired {@link ANY_TYPE} values are wrapped/unwrapped at the destination; invalid
+ * envelopes assert on the receiving node.
  */
 export function runGraph(map: NodeMap, inputs: Values = {}): GraphRunResult {
   const byId: Record<string, DefiniteNode> = {};
@@ -47,10 +55,42 @@ export function runGraph(map: NodeMap, inputs: Values = {}): GraphRunResult {
     errors[node.id] = errorMessage(err);
   }
 
-  function valueFrom(src: PortRef): unknown {
+  function rawFrom(src: PortRef): unknown {
     const srcNode = byId[src.node];
     const srcPort = srcNode?.outputs[src.port];
     return srcPort ? outputsOf(srcNode)[srcPort.name] : undefined;
+  }
+
+  /**
+   * Deliver a wired value into `destPort`, wrapping/unwrapping `any` envelopes.
+   * Throws on failed assert so the destination node owns the error.
+   */
+  function deliver(src: PortRef, destPort: Port): unknown {
+    const srcNode = byId[src.node];
+    const srcPort = srcNode?.outputs[src.port];
+    const raw = rawFrom(src);
+    const srcType = srcPort?.type;
+
+    if (destPort.type === ANY_TYPE) {
+      if (srcType === ANY_TYPE || isAnyValue(raw)) {
+        return isAnyValue(raw) ? raw : wrapAny(srcType ?? ANY_TYPE, raw);
+      }
+      return wrapAny(srcType ?? ANY_TYPE, raw);
+    }
+
+    if (srcType === ANY_TYPE || isAnyValue(raw)) {
+      const env = unwrapAny(raw);
+      if (!env) {
+        throw new Error("Expected Any envelope");
+      }
+      const destDef = map.types[destPort.type];
+      if (!destDef?.validate(env.contents)) {
+        throw new Error(`Expected ${destDef?.label ?? destPort.type}`);
+      }
+      return env.contents;
+    }
+
+    return raw;
   }
 
   function resolveInputs(
@@ -62,9 +102,9 @@ export function runGraph(map: NodeMap, inputs: Values = {}): GraphRunResult {
     for (const port of Object.values(node.inputs)) {
       const srcs = incoming.get(`${node.id}:${port.id}`) ?? [];
       if (port.multi) {
-        vals[port.name] = srcs.map(valueFrom);
+        vals[port.name] = srcs.map((s) => deliver(s, port));
       } else if (srcs.length) {
-        vals[port.name] = valueFrom(srcs[0]);
+        vals[port.name] = deliver(srcs[0]!, port);
       } else if (isConnectionOnly(port, map.types[port.type])) {
         vals[port.name] = undefined;
       } else {
@@ -98,14 +138,19 @@ export function runGraph(map: NodeMap, inputs: Values = {}): GraphRunResult {
         out[port.name] = port.name in inputs ? inputs[port.name] : port.value;
       }
     } else if (isCompositeNode(node)) {
-      const nestedMap = buildNestedMap(map, node);
-      const nestedInputs = resolveInputs(node);
-      const nested = runGraph(nestedMap, nestedInputs);
-      for (const msg of Object.values(nested.errors)) {
-        recordError(node, new Error(msg));
-        break;
+      try {
+        const nestedMap = buildNestedMap(map, node);
+        const nestedInputs = resolveInputs(node);
+        const nested = runGraph(nestedMap, nestedInputs);
+        for (const msg of Object.values(nested.errors)) {
+          recordError(node, new Error(msg));
+          break;
+        }
+        out = nested.values;
+      } catch (err) {
+        recordError(node, err);
+        out = {};
       }
-      out = nested.values;
     } else {
       const def = map.nodeTypes[node.typeId];
       if (def?.execute) {
@@ -126,8 +171,13 @@ export function runGraph(map: NodeMap, inputs: Values = {}): GraphRunResult {
   }
 
   const output = map.graph.nodes.find((n) => n.typeId === OUTPUT_TYPE);
-  return {
-    values: output ? resolveInputs(output, { useDefaults: false }) : {},
-    errors,
-  };
+  let values: Values = {};
+  if (output) {
+    try {
+      values = resolveInputs(output, { useDefaults: false });
+    } catch (err) {
+      recordError(output, err);
+    }
+  }
+  return { values, errors };
 }

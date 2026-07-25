@@ -113,6 +113,36 @@ export const pack: NodePack = {
         return { result: Number(v ?? 0) };
       },
     },
+    "@test/box-number": {
+      typeId: "@test/box-number",
+      displayName: "Box Number",
+      color: "#78716c",
+      description: "Wraps a number into an any envelope",
+      inputs: {
+        value: { type: "number", defaultValue: 1 },
+      },
+      outputs: {
+        result: { type: "any" },
+      },
+      execute(inputs) {
+        return {
+          result: { type: "number", contents: Number(inputs.value ?? 0) },
+        };
+      },
+    },
+    "@test/bad-any": {
+      typeId: "@test/bad-any",
+      displayName: "Bad Any",
+      color: "#a16207",
+      description: "Outputs an any envelope with a string (fails number assert)",
+      inputs: {},
+      outputs: {
+        result: { type: "any" },
+      },
+      execute() {
+        return { result: { type: "number", contents: "not-a-number" } };
+      },
+    },
   },
   setup({ registerComponentWidget }) {
     registerComponentWidget(BOOLEAN_WIDGET_ID, BooleanWidget);

@@ -11,6 +11,8 @@ import { applyGraphInterface, ensureBoundaryNodes } from "../nodes/io";
 import type { NodePack } from "../registry";
 import { registerNodeTypes, registerTypes } from "../registry";
 import type { NodeSpecRegistry } from "../registry/defineNode";
+import { anyTypeDef } from "../types/any";
+import { syncAssertNodes } from "../nodes/assert";
 
 /** Options for the vue entry `createNodeMap()`. */
 export interface CreateNodeMapInit {
@@ -41,8 +43,13 @@ export function createNodeMapBase(init: CreateNodeMapInit = {}): NodeMap {
     loadPack: () => [],
   };
 
+  // Reserved built-in; registered before init.types / packs.
+  registerTypes(map, { [anyTypeDef.id]: anyTypeDef });
+
   if (init.types) registerTypes(map, init.types);
   if (init.nodeTypes) registerNodeTypes(map, init.nodeTypes);
+
+  syncAssertNodes(map);
 
   applyGraphInterface(map, map.graphInterface);
   ensureBoundaryNodes(map);

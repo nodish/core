@@ -7,6 +7,7 @@ import type {
   TypeWidgetSpec,
 } from "../model";
 import { type NodeSpecRegistry, normalizeNode } from "./defineNode";
+import { syncAssertNodes } from "../nodes/assert";
 
 /**
  * A publishable bundle of custom types and/or node types (npm package contents).
@@ -46,6 +47,7 @@ export interface PackSetupContext {
 
 export function registerTypes(map: NodeMap, types: TypeRegistry): void {
   Object.assign(map.types, types);
+  syncAssertNodes(map);
 }
 
 /** Merge node specs into the runtime registry, expanding ports and defaults. */
