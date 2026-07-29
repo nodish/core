@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@microsoft/api-extractor": "^7.58.12",
-    "@types/node": "^26.1.1",
+    "@types/node": "^26.1.2",
     "@vitejs/plugin-vue": "^6.0.8",
     "@vue/language-core": "^3.3.7",
     "typescript": "~6.0.2",
