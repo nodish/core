@@ -61,6 +61,7 @@ export function reconcileSide(
       existing.widgetId = d.widgetId;
       existing.connectionOnly = d.connectionOnly;
       existing.customProps = d.customProps;
+      existing.autoConnect = d.autoConnect;
       next[existing.id] = existing;
     } else {
       const id = crypto.randomUUID();
@@ -76,6 +77,7 @@ export function reconcileSide(
         widgetId: d.widgetId,
         connectionOnly: d.connectionOnly,
         customProps: d.customProps,
+        autoConnect: d.autoConnect,
       };
     }
   }

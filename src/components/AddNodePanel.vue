@@ -14,6 +14,8 @@ import { NODE_FONT_SIZE, NODE_PADDING_X, ROW_H } from "./layout";
 const props = defineProps<{
   map: NodeMap;
   screen: { x: number; y: number };
+  /** When set, only node types that pass this check are listed. */
+  compatible?: (n: IndefiniteNode) => boolean;
 }>();
 
 const emit = defineEmits<{
@@ -33,7 +35,14 @@ onMounted(() => searchEl.value?.focus());
 const creatable = (n: IndefiniteNode) =>
   n.typeId !== INPUT_TYPE &&
   n.typeId !== OUTPUT_TYPE &&
-  n.typeId !== COMPOSITE_TYPE;
+  n.typeId !== COMPOSITE_TYPE &&
+  (props.compatible ? props.compatible(n) : true);
+
+const showComposite = computed(() => {
+  if (!props.compatible) return true;
+  const def = props.map.nodeTypes[COMPOSITE_TYPE];
+  return def ? props.compatible(def) : false;
+});
 
 const tree = computed(() =>
   sortNodeGroupTree(buildNodeGroupTree(props.map.nodeTypes, creatable)),
@@ -157,7 +166,7 @@ function onBackdropDown(e: PointerEvent) {
           </nav>
         </template>
 
-        <template #header-actions>
+        <template v-if="showComposite" #header-actions>
           <button
             class="inspector-icon-btn"
             type="button"

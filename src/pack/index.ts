@@ -33,6 +33,7 @@ export {
 export type { NodePack, PackSetupContext } from "../store/registry";
 
 export type {
+  AutoConnectHint,
   GraphPortSpec,
   IndefiniteNode,
   NodeLocation,

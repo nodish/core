@@ -94,6 +94,14 @@ export type TypeRegistry = Record<PortTypeId, PortTypeDefinition>;
 
 export type PortDirection = "input" | "output";
 
+/** Hint used when auto-connecting a newly created node to a dragged port. */
+export type AutoConnectHint = {
+  /** Extra types this port prefers when ranking drop-to-add matches. */
+  types?: PortTypeId[];
+  /** Higher wins among compatible ports. Defaults to 0. */
+  priority?: number;
+};
+
 /**
  * Port template declared by a node type ({@link IndefiniteNode}). Has no id and
  * no live value — only describes ports that instances will receive.
@@ -135,6 +143,13 @@ export type PortDefinition = {
    * Recognized keys: `options`, `min`, `max`, `step`, `rows`, `rowHeight`.
    */
   customProps?: Record<string, unknown>;
+  /**
+   * Drop-to-add ranking. When a connection is released in empty space and a
+   * node is created, compatible opposite-side ports are scored: higher
+   * {@link AutoConnectHint.priority} wins, then preferred types, then primary
+   * type match.
+   */
+  autoConnect?: AutoConnectHint;
 };
 
 /**
@@ -155,6 +170,7 @@ export type Port = {
   widgetId?: string;
   connectionOnly?: boolean;
   customProps?: Record<string, unknown>;
+  autoConnect?: AutoConnectHint;
 };
 
 /** Port templates on a definition, keyed by name (authoring-friendly). */

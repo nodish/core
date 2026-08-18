@@ -35,6 +35,11 @@ export {
 export { assignable, portAccepts } from "../store/graph/connect";
 
 export {
+  nodeAcceptsDrop,
+  pickAutoConnectPort,
+} from "../store/graph/autoConnect";
+
+export {
   isConnectionOnly,
   isUnionPort,
   portTypes,
@@ -49,6 +54,7 @@ export {
 } from "../components/types/registerDefaultTypeWidgets";
 
 export type {
+  AutoConnectHint,
   Connection,
   ConnectionId,
   DefiniteNode,

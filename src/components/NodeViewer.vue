@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, provide, ref, toRef, watch } from "vue";
-import type { NodeMap, Port, PortRef } from "../store/model";
+import type {
+  DefiniteNode,
+  IndefiniteNode,
+  NodeMap,
+  Port,
+  PortRef,
+} from "../store/model";
 import { runGraph } from "../store/graph/evaluate";
 import {
   addConnection,
@@ -8,6 +14,10 @@ import {
   ancestorNodeIds,
   descendantNodeIds,
 } from "../store/graph/connect";
+import {
+  nodeAcceptsDrop,
+  pickAutoConnectPort,
+} from "../store/graph/autoConnect";
 import { removeNode, canRemoveNode } from "../store/graph/removeNode";
 import {
   buildClipboard,
@@ -113,7 +123,7 @@ function popUpOneLevel() {
   if (!editStack.value.length) return;
   editStack.value = editStack.value.slice(0, -1);
   clearSelection();
-  menu.value = null;
+  closeMenu();
 }
 
 function applyInterfaceMutationFromViewer(mutate: InterfaceMutator): string[] {
@@ -144,7 +154,7 @@ function onDrillIn(id: string) {
   }
   editStack.value.push({ compositeNodeId: id });
   clearSelection();
-  menu.value = null;
+  closeMenu();
 }
 
 const graphEval = computed(() => runGraph(activeMap.value));
@@ -285,7 +295,7 @@ function endLeftPress() {
     selectedIds.value = nodesInBox(boxSelect.value.start, boxSelect.value.cur);
   } else if (leftPress) {
     clearSelection();
-    menu.value = null;
+    closeMenu();
   }
   boxSelect.value = null;
   leftPress = null;
@@ -313,8 +323,51 @@ function toScreen(clientX: number, clientY: number): Point {
   return { x: clientX - (rect?.left ?? 0), y: clientY - (rect?.top ?? 0) };
 }
 
-// ---- Create-node menu --------------------------------------------------
+// ---- Connecting / create-node menu -------------------------------------
+type Pending = { ref: PortRef; dir: Port["direction"]; pos: Point };
+const pending = ref<Pending | null>(null);
+const pendingCursor = ref<Point | null>(null);
+// Nodes that must not be snap targets for this drag (would create a cycle).
+const pendingBlockedNodes = ref<Set<string> | null>(null);
 const menu = ref<{ screen: Point; world: Point } | null>(null);
+let lastConnectClient = { x: 0, y: 0 };
+
+function pendingFromPort(): Port | null {
+  const p = pending.value;
+  if (!p) return null;
+  const node = activeMap.value.graph.nodes.find((n) => n.id === p.ref.node);
+  return p.dir === "output"
+    ? (node?.outputs[p.ref.port] ?? null)
+    : (node?.inputs[p.ref.port] ?? null);
+}
+
+const menuCompatible = computed(() => {
+  const fromPort = pendingFromPort();
+  if (!fromPort) return undefined;
+  const map = activeMap.value;
+  return (n: IndefiniteNode) => nodeAcceptsDrop(map, n, fromPort);
+});
+
+function connectPendingToNode(node: DefiniteNode) {
+  const p = pending.value;
+  if (!p) return;
+  const target = pickAutoConnectPort(activeMap.value, node, p.ref, p.dir);
+  if (!target) return;
+  const from = p.dir === "output" ? p.ref : target;
+  const to = p.dir === "output" ? target : p.ref;
+  addConnection(activeMap.value, from, to);
+}
+
+function clearPending() {
+  pending.value = null;
+  pendingCursor.value = null;
+  pendingBlockedNodes.value = null;
+}
+
+function closeMenu() {
+  menu.value = null;
+  clearPending();
+}
 
 function onCreateNode(typeId: string) {
   if (typeId === COMPOSITE_TYPE) {
@@ -328,9 +381,10 @@ function onCreateNode(typeId: string) {
     const node = instantiate(def, { x: at.x, y: at.y });
     activeMap.value.graph.nodes.push(node);
     ensureStackingOrder(activeMap.value);
+    connectPendingToNode(node);
     onSelect(node.id, false);
   }
-  menu.value = null;
+  closeMenu();
 }
 
 function onAddComposite() {
@@ -345,22 +399,16 @@ function onAddComposite() {
   );
   if (cycleErr) {
     console.warn(`[Group] ${cycleErr}`);
-    menu.value = null;
+    closeMenu();
     return;
   }
   history.pushBefore(props.map);
   hostGraph.nodes.push(node);
   ensureStackingOrder(activeMap.value);
+  connectPendingToNode(node);
   onSelect(node.id, false);
-  menu.value = null;
+  closeMenu();
 }
-
-// ---- Connecting --------------------------------------------------------
-type Pending = { ref: PortRef; dir: Port["direction"]; pos: Point };
-const pending = ref<Pending | null>(null);
-const pendingCursor = ref<Point | null>(null);
-// Nodes that must not be snap targets for this drag (would create a cycle).
-const pendingBlockedNodes = ref<Set<string> | null>(null);
 
 // While dragging, snap the tip to a matching port if one is in range.
 const pendingSnapped = computed((): Point | null => {
@@ -386,6 +434,7 @@ function onConnectStart(ref: PortRef, port: Port, ev: PointerEvent) {
   const node = activeMap.value.graph.nodes.find((n) => n.id === ref.node);
   const pos = node ? portPosition(node, ref.port, portTypeLookup) : null;
   if (!pos) return;
+  lastConnectClient = { x: ev.clientX, y: ev.clientY };
   pending.value = { ref, dir: port.direction, pos };
   pendingCursor.value = toWorld(ev.clientX, ev.clientY);
   pendingBlockedNodes.value = new Set(
@@ -398,6 +447,7 @@ function onConnectStart(ref: PortRef, port: Port, ev: PointerEvent) {
 }
 
 function onConnectMove(ev: PointerEvent) {
+  lastConnectClient = { x: ev.clientX, y: ev.clientY };
   pendingCursor.value = toWorld(ev.clientX, ev.clientY);
 }
 
@@ -439,6 +489,8 @@ function nearestPort(
 }
 
 function finishConnect() {
+  window.removeEventListener("pointermove", onConnectMove);
+  window.removeEventListener("pointerup", finishConnect);
   const p = pending.value;
   const cur = pendingCursor.value;
   if (p && cur) {
@@ -454,13 +506,16 @@ function finishConnect() {
       const to = p.dir === "output" ? target : p.ref;
       history.pushBefore(props.map);
       addConnection(activeMap.value, from, to);
+      clearPending();
+      return;
     }
+    menu.value = {
+      screen: toScreen(lastConnectClient.x, lastConnectClient.y),
+      world: cur,
+    };
+    return;
   }
-  pending.value = null;
-  pendingCursor.value = null;
-  pendingBlockedNodes.value = null;
-  window.removeEventListener("pointermove", onConnectMove);
-  window.removeEventListener("pointerup", finishConnect);
+  clearPending();
 }
 
 // ---- Right button: slice (drag) or create-node menu (click) ------------
@@ -566,7 +621,7 @@ function recenter() {
 function resetView() {
   editStack.value = [];
   clearSelection();
-  menu.value = null;
+  closeMenu();
   interfaceRevision.value++;
 }
 
@@ -597,7 +652,7 @@ function afterHistoryRestore() {
   const alive = new Set(activeMap.value.graph.nodes.map((n) => n.id));
   selectedIds.value = selectedIds.value.filter((id) => alive.has(id));
   ensureStackingOrder(activeMap.value);
-  menu.value = null;
+  closeMenu();
 }
 
 function onViewerPointerMove(e: PointerEvent) {
@@ -606,7 +661,7 @@ function onViewerPointerMove(e: PointerEvent) {
 
 function onKeyDown(e: KeyboardEvent) {
   if (e.key === "Escape") {
-    if (menu.value) menu.value = null;
+    if (menu.value) closeMenu();
     else if (editStack.value.length) popUpOneLevel();
     else if (selectedIds.value.length) clearSelection();
     else recenter();
@@ -815,9 +870,10 @@ onUnmounted(() => {
       v-if="menu"
       :map="activeMap"
       :screen="menu.screen"
+      :compatible="menuCompatible"
       @select="onCreateNode"
       @add-composite="onAddComposite"
-      @close="menu = null"
+      @close="closeMenu"
     />
   </div>
 </template>

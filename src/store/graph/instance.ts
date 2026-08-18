@@ -24,6 +24,7 @@ function materialize(io: NodeIODefinition, direction: PortDirection): NodeIO {
       widgetId: def.widgetId,
       connectionOnly: def.connectionOnly,
       customProps: def.customProps,
+      autoConnect: def.autoConnect,
     };
   }
   return ports;
