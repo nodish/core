@@ -223,4 +223,8 @@ function onTitleInput(e: Event) {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
+.inspector-icon-btn:disabled {
+  color: rgba(255, 255, 255, 0.28);
+  cursor: default;
+}
 </style>

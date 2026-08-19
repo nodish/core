@@ -30,6 +30,7 @@ export {
   buildClipboard,
   pasteClipboard,
   type ClipboardPayload,
+  type PasteResult,
 } from "../store/graph/duplicateSelection";
 
 export { assignable, portAccepts } from "../store/graph/connect";
@@ -38,6 +39,13 @@ export {
   nodeAcceptsDrop,
   pickAutoConnectPort,
 } from "../store/graph/autoConnect";
+
+export {
+  dissolveFrame,
+  FRAME_DEFAULT_COLOR,
+  wrapSelection,
+  unframeNodes,
+} from "../store/graph/frames";
 
 export {
   isConnectionOnly,
@@ -58,7 +66,9 @@ export type {
   Connection,
   ConnectionId,
   DefiniteNode,
+  FrameId,
   GraphDocument,
+  GraphFrame,
   GraphInterface,
   IndefiniteNode,
   NodeGraph,

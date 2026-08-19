@@ -4,6 +4,7 @@ export type NodeId = string;
 export type PortId = string;
 export type ConnectionId = string;
 export type NodeTypeId = string;
+export type FrameId = string;
 
 export type NodeLocation = {
   x: number;
@@ -302,12 +303,28 @@ export const defaultGraphInterface: GraphInterface = {
 };
 
 /**
+ * Visual grouping rectangle. Organizational only — does not affect evaluation.
+ * Geometry is derived (shrink-wrap) from member nodes and nested child frames.
+ */
+export interface GraphFrame {
+  id: FrameId;
+  label?: string;
+  color?: string;
+  /** Parent frame when nested. */
+  parentId?: FrameId;
+  /** Direct member nodes. Each node id appears in at most one frame. */
+  nodeIds: NodeId[];
+}
+
+/**
  * Placed nodes and connections. Every graph must contain exactly one Input node
  * and one Output node.
  */
 export interface NodeGraph {
   nodes: DefiniteNode[];
   connections: Connection[];
+  /** Optional visual frames. Omitted in older documents. */
+  frames?: GraphFrame[];
 }
 
 /**

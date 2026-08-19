@@ -1,8 +1,15 @@
-import type { DefiniteNode, Port, PortTypeDefinition } from "../store/model";
+import type {
+  DefiniteNode,
+  GraphFrame,
+  NodeGraph,
+  Port,
+  PortTypeDefinition,
+} from "../store/model";
 import {
   effectiveWidget,
   widgetRowHeight,
 } from "../store/types/effectiveWidget";
+import { childFrames } from "../store/graph/frames";
 
 // Layout constants - shared by the node DOM and the wire math so sockets and
 // wire endpoints always line up.
@@ -15,6 +22,7 @@ export const ROW_MIN_H = 20;
 export const ROW_MAX_H = 240;
 export const NODE_FONT_SIZE = 11;
 export const NODE_PADDING_X = 6;
+export const FRAME_PAD = 12;
 
 export type PortTypeLookup = (port: Port) => PortTypeDefinition | undefined;
 
@@ -88,6 +96,61 @@ function portCenterY(
 }
 
 export type Point = { x: number; y: number };
+export type Rect = { x: number; y: number; width: number; height: number };
+
+/**
+ * Shrink-wrap rect for a frame: padded AABB of member nodes and child frames,
+ * plus a header strip on top.
+ */
+export function frameRect(
+  graph: NodeGraph,
+  frame: GraphFrame,
+  lookup?: PortTypeLookup,
+  cache = new Map<string, Rect | null>(),
+): Rect | null {
+  if (cache.has(frame.id)) return cache.get(frame.id) ?? null;
+  cache.set(frame.id, null);
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  let any = false;
+
+  const nodesById = new Map(graph.nodes.map((n) => [n.id, n]));
+  for (const id of frame.nodeIds) {
+    const n = nodesById.get(id);
+    if (!n) continue;
+    any = true;
+    const w = nodeWidth(n);
+    const h = nodeHeight(n, lookup);
+    minX = Math.min(minX, n.location.x);
+    minY = Math.min(minY, n.location.y);
+    maxX = Math.max(maxX, n.location.x + w);
+    maxY = Math.max(maxY, n.location.y + h);
+  }
+  for (const child of childFrames(graph, frame.id)) {
+    const r = frameRect(graph, child, lookup, cache);
+    if (!r) continue;
+    any = true;
+    minX = Math.min(minX, r.x);
+    minY = Math.min(minY, r.y);
+    maxX = Math.max(maxX, r.x + r.width);
+    maxY = Math.max(maxY, r.y + r.height);
+  }
+  if (!any) {
+    cache.set(frame.id, null);
+    return null;
+  }
+  const rect: Rect = {
+    x: minX - FRAME_PAD,
+    y: minY - FRAME_PAD - HEADER_H,
+    width: maxX - minX + FRAME_PAD * 2,
+    height: maxY - minY + FRAME_PAD * 2 + HEADER_H,
+  };
+  cache.set(frame.id, rect);
+  return rect;
+}
 
 // Absolute position (in viewer space) of a port on a node, for wire endpoints.
 // Inputs sit on the left edge, outputs on the right edge. Y follows the

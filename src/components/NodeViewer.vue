@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, provide, ref, toRef, watch } from "vue";
 import type {
   DefiniteNode,
+  FrameId,
   IndefiniteNode,
   NodeMap,
   Port,
@@ -19,6 +20,12 @@ import {
   pickAutoConnectPort,
 } from "../store/graph/autoConnect";
 import { removeNode, canRemoveNode } from "../store/graph/removeNode";
+import {
+  dissolveFrame,
+  framesBackToFront,
+  unframeNodes,
+  wrapSelection,
+} from "../store/graph/frames";
 import {
   buildClipboard,
   pasteClipboard,
@@ -52,13 +59,16 @@ import {
 } from "../store/composite/guards";
 import { graphHistoryKey, rootMapKey } from "./historyKey";
 import GraphNode from "./GraphNode.vue";
+import GraphFrameBox from "./GraphFrameBox.vue";
 import WireLayer from "./WireLayer.vue";
 import NodePanel from "./NodePanel.vue";
+import FramePanel from "./FramePanel.vue";
 import GroupPanel from "./GroupPanel.vue";
 import AddNodePanel from "./AddNodePanel.vue";
 import {
   type Point,
   ROW_H,
+  frameRect,
   nodeHeight,
   nodeWidth,
   portPosition,
@@ -189,10 +199,20 @@ const clipboard = ref<ClipboardPayload | null>(null);
 
 // ---- Selection ---------------------------------------------------------
 const selectedIds = ref<string[]>([]);
+const selectedFrameIds = ref<FrameId[]>([]);
 
 const selectedSet = computed(() => new Set(selectedIds.value));
+const selectedFrameSet = computed(() => new Set(selectedFrameIds.value));
 const selectedNodes = computed(() =>
   activeMap.value.graph.nodes.filter((n) => selectedSet.value.has(n.id)),
+);
+const selectedFrames = computed(() =>
+  (activeMap.value.graph.frames ?? []).filter((f) =>
+    selectedFrameSet.value.has(f.id),
+  ),
+);
+const selectionCount = computed(
+  () => selectedIds.value.length + selectedFrameIds.value.length,
 );
 const primarySelected = computed(() => selectedNodes.value[0] ?? null);
 const primaryDef = computed(() =>
@@ -201,7 +221,18 @@ const primaryDef = computed(() =>
     : null,
 );
 
+const visibleFrames = computed(() => {
+  const graph = activeMap.value.graph;
+  const lookup = portTypeLookup;
+  const cache = new Map<string, ReturnType<typeof frameRect>>();
+  return framesBackToFront(graph).flatMap((frame) => {
+    const rect = frameRect(graph, frame, lookup, cache);
+    return rect ? [{ frame, rect }] : [];
+  });
+});
+
 function selectOnly(id: string) {
+  selectedFrameIds.value = [];
   selectedIds.value = [id];
   bringToFront(activeMap.value, id);
 }
@@ -221,16 +252,35 @@ function onSelect(id: string, shiftKey: boolean) {
     toggleInSelection(id);
     return;
   }
-  // Clicking an already-selected node in a group keeps the group (for dragging).
-  if (selectedSet.value.has(id) && selectedIds.value.length > 1) {
+  if (selectedSet.value.has(id) && selectionCount.value > 1) {
     bringToFront(activeMap.value, id);
     return;
   }
   selectOnly(id);
 }
 
+function toggleFrameInSelection(id: FrameId) {
+  const idx = selectedFrameIds.value.indexOf(id);
+  if (idx >= 0) {
+    selectedFrameIds.value = selectedFrameIds.value.filter((x) => x !== id);
+  } else {
+    selectedFrameIds.value = [...selectedFrameIds.value, id];
+  }
+}
+
+function onSelectFrame(id: FrameId, shiftKey: boolean) {
+  if (shiftKey) {
+    toggleFrameInSelection(id);
+    return;
+  }
+  if (selectedFrameSet.value.has(id) && selectionCount.value > 1) return;
+  selectedIds.value = [];
+  selectedFrameIds.value = [id];
+}
+
 function clearSelection() {
   selectedIds.value = [];
+  selectedFrameIds.value = [];
 }
 
 function nodesInBox(a: Point, b: Point): string[] {
@@ -250,6 +300,55 @@ function nodesInBox(a: Point, b: Point): string[] {
       );
     })
     .map((n) => n.id);
+}
+
+function framesInBox(a: Point, b: Point): FrameId[] {
+  const minX = Math.min(a.x, b.x);
+  const maxX = Math.max(a.x, b.x);
+  const minY = Math.min(a.y, b.y);
+  const maxY = Math.max(a.y, b.y);
+  const cache = new Map<string, ReturnType<typeof frameRect>>();
+  const graph = activeMap.value.graph;
+  return (graph.frames ?? [])
+    .filter((f) => {
+      const r = frameRect(graph, f, portTypeLookup, cache);
+      if (!r) return false;
+      return (
+        r.x >= minX &&
+        r.y >= minY &&
+        r.x + r.width <= maxX &&
+        r.y + r.height <= maxY
+      );
+    })
+    .map((f) => f.id);
+}
+
+function wrapCurrentSelection() {
+  if (!selectionCount.value) return;
+  history.pushBefore(props.map);
+  const created = wrapSelection(
+    activeMap.value,
+    selectedIds.value,
+    selectedFrameIds.value,
+  );
+  if (!created) return;
+  selectedIds.value = [];
+  selectedFrameIds.value = [created.id];
+}
+
+function unframeCurrentSelection() {
+  if (!selectedIds.value.length) return;
+  history.pushBefore(props.map);
+  unframeNodes(activeMap.value, selectedIds.value);
+}
+
+function dissolveSelectedFrames() {
+  if (!selectedFrameIds.value.length) return;
+  history.pushBefore(props.map);
+  for (const id of [...selectedFrameIds.value]) {
+    dissolveFrame(activeMap.value, id);
+  }
+  selectedFrameIds.value = [];
 }
 
 // ---- Marquee (box) selection -------------------------------------------
@@ -293,6 +392,10 @@ function endLeftPress() {
   window.removeEventListener("pointerup", endLeftPress);
   if (leftBoxActive && boxSelect.value) {
     selectedIds.value = nodesInBox(boxSelect.value.start, boxSelect.value.cur);
+    selectedFrameIds.value = framesInBox(
+      boxSelect.value.start,
+      boxSelect.value.cur,
+    );
   } else if (leftPress) {
     clearSelection();
     closeMenu();
@@ -651,6 +754,12 @@ function afterHistoryRestore() {
   pruneEditStack();
   const alive = new Set(activeMap.value.graph.nodes.map((n) => n.id));
   selectedIds.value = selectedIds.value.filter((id) => alive.has(id));
+  const aliveFrames = new Set(
+    (activeMap.value.graph.frames ?? []).map((f) => f.id),
+  );
+  selectedFrameIds.value = selectedFrameIds.value.filter((id) =>
+    aliveFrames.has(id),
+  );
   ensureStackingOrder(activeMap.value);
   closeMenu();
 }
@@ -663,7 +772,7 @@ function onKeyDown(e: KeyboardEvent) {
   if (e.key === "Escape") {
     if (menu.value) closeMenu();
     else if (editStack.value.length) popUpOneLevel();
-    else if (selectedIds.value.length) clearSelection();
+    else if (selectionCount.value) clearSelection();
     else recenter();
     return;
   }
@@ -681,11 +790,17 @@ function onKeyDown(e: KeyboardEvent) {
     e.preventDefault();
     return;
   }
+  if (mod && e.key === "j") {
+    if (isEditingField(e)) return;
+    wrapCurrentSelection();
+    e.preventDefault();
+    return;
+  }
   if (mod && e.key === "c") {
     if (isEditingField(e)) return;
     const payload = buildClipboard(
-      selectedNodes.value,
-      activeMap.value.graph.connections,
+      activeMap.value,
+      { nodeIds: selectedIds.value, frameIds: selectedFrameIds.value },
       worldCursor.value,
     );
     if (payload) clipboard.value = payload;
@@ -696,27 +811,30 @@ function onKeyDown(e: KeyboardEvent) {
     if (isEditingField(e)) return;
     if (!clipboard.value) return;
     history.pushBefore(props.map);
-    const newIds = pasteClipboard(
+    const pasted = pasteClipboard(
       activeMap.value,
       clipboard.value,
       worldCursor.value,
     );
     ensureStackingOrder(activeMap.value);
-    for (const id of newIds) bringToFront(activeMap.value, id);
-    selectedIds.value = newIds;
+    for (const id of pasted.nodeIds) bringToFront(activeMap.value, id);
+    selectedIds.value = pasted.nodeIds;
+    selectedFrameIds.value = pasted.frameIds;
     e.preventDefault();
     return;
   }
 
   if (e.key !== "Delete" && e.key !== "Backspace") return;
   if (isEditingField(e)) return;
-  if (!selectedIds.value.length) return;
   const removable = selectedIds.value.filter((id) =>
     canRemoveNode(activeMap.value, id),
   );
-  if (!removable.length) return;
+  if (!removable.length && !selectedFrameIds.value.length) return;
   history.pushBefore(props.map);
   for (const id of removable) removeNode(activeMap.value, id);
+  for (const id of [...selectedFrameIds.value]) {
+    dissolveFrame(activeMap.value, id);
+  }
   clearSelection();
   e.preventDefault();
 }
@@ -823,6 +941,12 @@ onUnmounted(() => {
         @update:io-widgets="nestedIoWidgets = $event"
       />
 
+      <FramePanel
+        v-if="selectedFrames.length && !primarySelected"
+        :frames="selectedFrames"
+        @dissolve="dissolveSelectedFrames"
+      />
+
       <NodePanel
         v-if="primarySelected"
         class="stacked-panel"
@@ -838,11 +962,24 @@ onUnmounted(() => {
             ? nodeErrors[primarySelected.id]
             : undefined
         "
+        @frame="wrapCurrentSelection"
+        @unframe="unframeCurrentSelection"
       />
     </div>
 
     <div class="viewport" :style="viewportStyle">
       <div class="canvas-bg" @pointerdown="onCanvasPointerDown" />
+      <GraphFrameBox
+        v-for="item in visibleFrames"
+        :key="item.frame.id"
+        :frame="item.frame"
+        :rect="item.rect"
+        :map="activeMap"
+        :zoom="zoom"
+        :selected="selectedFrameSet.has(item.frame.id)"
+        :selected-frame-ids="selectedFrameSet"
+        @select="onSelectFrame"
+      />
       <WireLayer
         :map="activeMap"
         :pending-path="pendingPath"

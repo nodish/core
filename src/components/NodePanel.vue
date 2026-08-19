@@ -16,6 +16,7 @@ import InspectorWidthField from "./inspector/InspectorWidthField.vue";
 import type { InterfaceMutator } from "../store/interface/editor";
 import { graphHistoryKey, rootMapKey } from "./historyKey";
 import { NODE_MAX_WIDTH, NODE_MIN_WIDTH, NODE_WIDTH } from "./layout";
+import { sharedParentFrameId } from "../store/graph/frames";
 
 const HEADER_COLOR = "#3a3f4b";
 
@@ -35,6 +36,8 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:label": [value: string];
+  frame: [];
+  unframe: [];
 }>();
 
 const multi = computed(() => props.nodes.length > 1);
@@ -68,6 +71,19 @@ const effectiveColor = computed(() => {
   return n.color ?? props.def?.color ?? "#3a3f4b";
 });
 const effectiveWidth = computed(() => node.value?.width ?? NODE_WIDTH);
+
+const canFrame = computed(() =>
+  props.nodes.some(
+    (n) => n.typeId !== INPUT_TYPE && n.typeId !== OUTPUT_TYPE,
+  ),
+);
+const canUnframe = computed(
+  () =>
+    !!sharedParentFrameId(
+      props.map.graph,
+      props.nodes.map((n) => n.id),
+    ),
+);
 
 const avgX = computed(() => {
   if (!props.nodes.length) return 0;
@@ -129,6 +145,26 @@ function onYUpdate(target: number) {
     :static-title="multi"
     @update:title="onTitleUpdate"
   >
+    <template #header-actions>
+      <button
+        class="inspector-icon-btn"
+        type="button"
+        title="Frame selection"
+        :disabled="!canFrame"
+        @click="emit('frame')"
+      >
+        f
+      </button>
+      <button
+        v-if="canUnframe"
+        class="inspector-icon-btn"
+        type="button"
+        title="Remove from frame"
+        @click="emit('unframe')"
+      >
+        u
+      </button>
+    </template>
     <InspectorColorField
       v-if="!multi"
       :model-value="effectiveColor"

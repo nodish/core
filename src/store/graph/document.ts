@@ -6,6 +6,7 @@ import {
   validateBoundary,
 } from "../nodes/io";
 import { clonePlain } from "../utils/clonePlain";
+import { sanitizeFrames } from "./frames";
 import { validateGraphTypes } from "./validateGraphTypes";
 
 /**
@@ -48,6 +49,12 @@ export function parseGraphDocument(json: string): GraphDocument {
   }
   if (!Array.isArray(doc.graph.connections)) {
     throw new Error("graph.connections must be an array");
+  }
+  if (
+    doc.graph.frames !== undefined &&
+    !Array.isArray(doc.graph.frames)
+  ) {
+    throw new Error("graph.frames must be an array");
   }
   if (!doc.interface || typeof doc.interface !== "object") {
     throw new Error("document missing interface");
@@ -95,6 +102,7 @@ export function applyDocument(map: NodeMap, doc: GraphDocument): string[] {
 
   map.graph = clonePlain(doc.graph);
   map.graphInterface = clonePlain(doc.interface);
+  sanitizeFrames(map.graph);
 
   applyGraphInterface(map, map.graphInterface);
   ensureBoundaryNodes(map);

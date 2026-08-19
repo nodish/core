@@ -1,5 +1,6 @@
 import type { NodeId, NodeMap } from "../model";
 import { INPUT_TYPE, OUTPUT_TYPE } from "../nodes/io";
+import { pruneFrameMembership } from "./frames";
 
 // IO boundary nodes are graph singletons and must not be removed.
 export function canRemoveNode(map: NodeMap, id: NodeId): boolean {
@@ -15,4 +16,5 @@ export function removeNode(map: NodeMap, id: NodeId): void {
   map.graph.connections = map.graph.connections.filter(
     (c) => c.from.node !== id && c.to.node !== id,
   );
+  pruneFrameMembership(map, [id]);
 }

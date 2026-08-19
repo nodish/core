@@ -1,6 +1,8 @@
 import type {
   Connection,
   DefiniteNode,
+  FrameId,
+  GraphFrame,
   NodeGraph,
   NodeId,
   NodeIO,
@@ -10,6 +12,7 @@ import type {
 } from "../model";
 import { INPUT_TYPE, OUTPUT_TYPE } from "../nodes/io";
 import { clonePlain } from "../utils/clonePlain";
+import { descendantFrameIds, descendantNodeIds, ensureFrames } from "./frames";
 
 export type ClipboardPayload = {
   /** Deep clone at copy time (original ids preserved). */
@@ -17,6 +20,13 @@ export type ClipboardPayload = {
   /** Wires where both endpoints are in the copied node set. */
   connections: Connection[];
   offsets: Record<NodeId, { x: number; y: number }>;
+  /** Frames included in the copy (original ids). */
+  frames?: GraphFrame[];
+};
+
+export type PasteResult = {
+  nodeIds: NodeId[];
+  frameIds: FrameId[];
 };
 
 function isCopyable(node: DefiniteNode): boolean {
@@ -41,6 +51,24 @@ function remapPorts(
   return next;
 }
 
+function remapGraphFrames(
+  frames: GraphFrame[] | undefined,
+  nodeIdMap: Map<NodeId, NodeId>,
+): GraphFrame[] {
+  if (!frames?.length) return [];
+  const frameIdMap = new Map<FrameId, FrameId>();
+  for (const f of frames) frameIdMap.set(f.id, crypto.randomUUID());
+  return frames.map((f) => ({
+    id: frameIdMap.get(f.id)!,
+    label: f.label,
+    color: f.color,
+    parentId: f.parentId ? frameIdMap.get(f.parentId) : undefined,
+    nodeIds: f.nodeIds
+      .map((id) => nodeIdMap.get(id))
+      .filter((id): id is NodeId => !!id),
+  }));
+}
+
 function remapNestedGraph(
   graph: NodeGraph,
   nodeIdMap: Map<NodeId, NodeId>,
@@ -52,7 +80,8 @@ function remapNestedGraph(
   const connections = graph.connections.map((c) =>
     remapConnection(c, nodeIdMap, portIdMap),
   );
-  return { nodes, connections };
+  const frames = remapGraphFrames(graph.frames, nodeIdMap);
+  return { nodes, connections, frames: frames.length ? frames : undefined };
 }
 
 function remapConnection(
@@ -104,20 +133,37 @@ function remapNodeTree(
 }
 
 /**
- * Snapshot selected nodes and internal wires for in-memory paste.
- * Boundary IO nodes are excluded.
+ * Snapshot selected nodes/frames and internal wires for in-memory paste.
+ * Selected frames include their descendant nodes and frames. Boundary IO
+ * nodes are excluded. Frame membership is kept only for frames in the copy.
  */
 export function buildClipboard(
-  nodes: DefiniteNode[],
-  connections: Connection[],
+  map: NodeMap,
+  selection: { nodeIds: NodeId[]; frameIds?: FrameId[] },
   anchor: NodeLocation,
 ): ClipboardPayload | null {
-  const copyable = nodes.filter(isCopyable);
+  const graph = map.graph;
+  const byId = new Map(graph.nodes.map((n) => [n.id, n]));
+  const nodeIdSet = new Set(selection.nodeIds);
+  const frameIdSet = new Set(selection.frameIds ?? []);
+
+  for (const fid of [...frameIdSet]) {
+    if (!graph.frames?.some((f) => f.id === fid)) {
+      frameIdSet.delete(fid);
+      continue;
+    }
+    for (const n of descendantNodeIds(graph, fid)) nodeIdSet.add(n);
+    for (const f of descendantFrameIds(graph, fid)) frameIdSet.add(f);
+  }
+
+  const copyable = [...nodeIdSet]
+    .map((id) => byId.get(id))
+    .filter((n): n is DefiniteNode => !!n && isCopyable(n));
   if (!copyable.length) return null;
 
-  const idSet = new Set(copyable.map((n) => n.id));
-  const internal = connections.filter(
-    (c) => idSet.has(c.from.node) && idSet.has(c.to.node),
+  const copiedIds = new Set(copyable.map((n) => n.id));
+  const internal = graph.connections.filter(
+    (c) => copiedIds.has(c.from.node) && copiedIds.has(c.to.node),
   );
 
   const offsets: Record<NodeId, { x: number; y: number }> = {};
@@ -129,21 +175,31 @@ export function buildClipboard(
     return clonePlain(node);
   });
 
+  const frames = (graph.frames ?? [])
+    .filter((f) => frameIdSet.has(f.id))
+    .map((f) => ({
+      ...clonePlain(f),
+      parentId:
+        f.parentId && frameIdSet.has(f.parentId) ? f.parentId : undefined,
+      nodeIds: f.nodeIds.filter((id) => copiedIds.has(id)),
+    }));
+
   return {
     nodes: cloned,
     connections: clonePlain(internal),
     offsets,
+    frames: frames.length ? frames : undefined,
   };
 }
 
 /**
- * Paste a clipboard payload into `map` at `anchor`, returning new top-level node ids.
+ * Paste a clipboard payload into `map` at `anchor`.
  */
 export function pasteClipboard(
   map: NodeMap,
   payload: ClipboardPayload,
   anchor: NodeLocation,
-): NodeId[] {
+): PasteResult {
   const nodeIdMap = new Map<NodeId, NodeId>();
   const portIdMap = new Map<string, PortId>();
 
@@ -162,5 +218,11 @@ export function pasteClipboard(
   map.graph.nodes.push(...newNodes);
   map.graph.connections.push(...newConnections);
 
-  return newNodes.map((n) => n.id);
+  const newFrames = remapGraphFrames(payload.frames, nodeIdMap);
+  if (newFrames.length) ensureFrames(map.graph).push(...newFrames);
+
+  return {
+    nodeIds: newNodes.map((n) => n.id),
+    frameIds: newFrames.map((f) => f.id),
+  };
 }
