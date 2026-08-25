@@ -1,38 +1,26 @@
-name: Publish to npm
+name: Publish Package
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - 'v*'
+
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: npm
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Ensure tagged commit is on master
-        run: |
-          git fetch origin master
-          git merge-base --is-ancestor "${GITHUB_SHA}" "origin/master"
 
       - uses: actions/setup-node@v6
         with:
-          node-version: "24"
-          registry-url: "https://registry.npmjs.org"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false  # never use caching in release builds
       - run: npm ci
-      - run: npm run build
-
-      - name: Pack tarball
-        id: pack
-        run: echo "file=$(npm pack --silent)" >> "$GITHUB_OUTPUT"
-
-      - name: Publish tarball
-        run: npm publish "${{ steps.pack.outputs.file }}" --access public
+      - run: npm run build --if-present
+      - run: npm test
+      - run: npm publish  # Or: npm stage publish
