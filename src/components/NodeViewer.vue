@@ -1,5 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, provide, ref, toRef, watch } from "vue";
+import {
+  computed,
+  onMounted,
+  onUnmounted,
+  provide,
+  ref,
+  toRef,
+  watch,
+} from "vue";
 import type {
   DefiniteNode,
   FrameId,
@@ -844,20 +852,25 @@ function onWheel(e: WheelEvent) {
   const el = viewerEl.value;
   if (!el) return;
 
-  const rect = el.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-  const wx = (mx - panX.value) / zoom.value;
-  const wy = (my - panY.value) / zoom.value;
+  if (e.ctrlKey || e.metaKey) {
+    const rect = el.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const wx = (mx - panX.value) / zoom.value;
+    const wy = (my - panY.value) / zoom.value;
+    const nextZoom = Math.min(
+      MAX_ZOOM,
+      Math.max(MIN_ZOOM, zoom.value * (1 - e.deltaY * ZOOM_SENSITIVITY)),
+    );
+    panX.value = mx - wx * nextZoom;
+    panY.value = my - wy * nextZoom;
+    zoom.value = nextZoom;
+    return;
+  }
 
-  const nextZoom = Math.min(
-    MAX_ZOOM,
-    Math.max(MIN_ZOOM, zoom.value * (1 - e.deltaY * ZOOM_SENSITIVITY)),
-  );
-
-  panX.value = mx - wx * nextZoom;
-  panY.value = my - wy * nextZoom;
-  zoom.value = nextZoom;
+  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? el.clientHeight : 1;
+  panX.value -= e.deltaX * unit;
+  panY.value -= e.deltaY * unit;
 }
 
 function startPan(e: PointerEvent) {
