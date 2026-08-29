@@ -16,7 +16,7 @@ import type {
   Port,
   PortRef,
 } from "../store/model";
-import { runGraph } from "../store/graph/evaluate";
+import { runGraph, type GraphRunResult } from "../store/graph/evaluate";
 import {
   addConnection,
   removeConnection,
@@ -105,8 +105,10 @@ const props = withDefaults(
     // When true: Input node outputs get editable fields; Output node inputs
     // show live computed results. Off by default.
     ioWidgets?: boolean;
+    /** When false, do not evaluate on change. Call `runGraph` yourself. */
+    autoEval?: boolean;
   }>(),
-  { ioWidgets: false },
+  { ioWidgets: false, autoEval: true },
 );
 
 const history = createGraphHistory();
@@ -175,7 +177,11 @@ function onDrillIn(id: string) {
   closeMenu();
 }
 
-const graphEval = computed(() => runGraph(activeMap.value));
+const EMPTY_RUN: GraphRunResult = { values: {}, errors: {} };
+
+const graphEval = computed(() =>
+  props.autoEval ? runGraph(activeMap.value) : EMPTY_RUN,
+);
 const ioResults = computed(() =>
   effectiveIoWidgets.value ? graphEval.value.values : undefined,
 );
