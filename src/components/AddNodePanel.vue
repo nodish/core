@@ -80,12 +80,21 @@ function goUp() {
   currentPath.value = currentPath.value.slice(0, -1);
 }
 
+function nodeMatchesQuery(n: IndefiniteNode, q: string): boolean {
+  if (n.displayName.toLowerCase().includes(q)) return true;
+  if (n.description.toLowerCase().includes(q)) return true;
+  if (n.typeId.toLowerCase().includes(q)) return true;
+  if ((n.group ?? []).some((seg) => seg.toLowerCase().includes(q))) return true;
+  if ((n.keywords ?? []).some((k) => k.toLowerCase().includes(q))) return true;
+  return false;
+}
+
 const matches = computed<IndefiniteNode[] | null>(() => {
   const q = query.value.trim().toLowerCase();
   if (!q) return null;
   return Object.values(props.map.nodeTypes)
     .filter(creatable)
-    .filter((n) => n.displayName.toLowerCase().includes(q))
+    .filter((n) => nodeMatchesQuery(n, q))
     .sort((a, b) => a.displayName.localeCompare(b.displayName));
 });
 

@@ -30,6 +30,8 @@ export interface TypeSpec {
    * Existing interface ports that already use it remain editable.
    */
   hidden?: boolean;
+  /** Shown in type-picker hover and port tooltips. */
+  description?: string;
   /** Override default parse behaviour for this type's widget. */
   parse?: (raw: string) => unknown;
   /** Override default format behaviour for this type's widget. */
@@ -77,6 +79,7 @@ export function defineType(spec: TypeSpec): PortTypeDefinition {
     defaultValue: spec.defaultValue,
     priority: spec.priority,
     hidden: spec.hidden,
+    description: spec.description,
     ...widgetFields,
     parse: spec.parse ?? auto.parse,
     format: spec.format ?? auto.format,

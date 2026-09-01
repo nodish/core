@@ -240,6 +240,7 @@ function onTypeChange(name: string, type: string) {
               v-for="tid in optionsFor(row.spec.type)"
               :key="tid"
               :value="tid"
+              :title="types[tid]?.description || types[tid]?.label || tid"
             >
               {{ tid }}
             </option>

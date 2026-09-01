@@ -56,6 +56,8 @@ export function reconcileSide(
       // Keep id/value/identity; refresh the type-derived fields.
       existing.type = d.type;
       existing.types = d.types;
+      existing.label = d.label;
+      existing.description = d.description;
       existing.userOnly = d.userOnly;
       existing.multi = d.multi;
       existing.widgetId = d.widgetId;
@@ -68,6 +70,7 @@ export function reconcileSide(
       next[id] = {
         id,
         name: d.name,
+        label: d.label,
         type: d.type,
         types: d.types,
         direction,
@@ -78,6 +81,7 @@ export function reconcileSide(
         connectionOnly: d.connectionOnly,
         customProps: d.customProps,
         autoConnect: d.autoConnect,
+        description: d.description,
       };
     }
   }

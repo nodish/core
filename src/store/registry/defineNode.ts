@@ -35,6 +35,8 @@ export interface NodeSpec {
   displayName: string;
   color?: string;
   description?: string;
+  /** Extra palette-search terms (aliases, synonyms). */
+  keywords?: string[];
   /**
    * Hierarchical menu category, broadest first. See {@link IndefiniteNode.group}.
    */
@@ -67,6 +69,7 @@ export function normalizeNode(spec: NodeSpec): IndefiniteNode {
     displayName: spec.displayName,
     color: spec.color ?? "#3a3f4b",
     description: spec.description ?? "",
+    keywords: spec.keywords,
     group: spec.group ?? [],
     inputs: expandIO(spec.inputs),
     outputs: expandIO(spec.outputs),

@@ -88,6 +88,8 @@ export interface PortTypeDefinition {
    * (and its default widget is not offered for new interface ports).
    */
   hidden?: boolean;
+  /** Shown in type-picker hover and port tooltips. */
+  description?: string;
 }
 
 /** Library of available data types, keyed by id. */
@@ -110,6 +112,8 @@ export type AutoConnectHint = {
 export type PortDefinition = {
   /** Stable, human-authored key; referenced inside `execute()`. */
   name: string;
+  /** UI name. Falls back to {@link name}. */
+  label?: string;
   /** Primary/display type (color, labels). Must appear in {@link types} when set. */
   type: PortType;
   /**
@@ -161,6 +165,8 @@ export type Port = {
   id: PortId;
   /** Matches the {@link PortDefinition.name} it came from. */
   name: string;
+  /** UI name. Falls back to {@link name}. */
+  label?: string;
   type: PortType;
   types?: PortTypeId[];
   direction: PortDirection;
@@ -172,6 +178,7 @@ export type Port = {
   connectionOnly?: boolean;
   customProps?: Record<string, unknown>;
   autoConnect?: AutoConnectHint;
+  description?: string;
 };
 
 /** Port templates on a definition, keyed by name (authoring-friendly). */
@@ -204,6 +211,8 @@ export interface IndefiniteNode {
   displayName: string;
   color: string;
   description: string;
+  /** Extra palette-search terms (aliases, synonyms). */
+  keywords?: string[];
   /**
    * Hierarchical menu category, broadest first, e.g. `["Math", "Basic Operations"]`.
    * Empty or omitted places the node at the menu root.

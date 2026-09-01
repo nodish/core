@@ -15,7 +15,8 @@ import InspectorPositionField from "./inspector/InspectorPositionField.vue";
 import InspectorWidthField from "./inspector/InspectorWidthField.vue";
 import type { InterfaceMutator } from "../store/interface/editor";
 import { graphHistoryKey, rootMapKey } from "./historyKey";
-import { NODE_MAX_WIDTH, NODE_MIN_WIDTH, NODE_WIDTH } from "./layout";
+import { NODE_MAX_WIDTH, NODE_MIN_WIDTH, NODE_WIDTH, stackedPorts } from "./layout";
+import InspectorSection from "./inspector/InspectorSection.vue";
 import { sharedParentFrameId } from "../store/graph/frames";
 
 const HEADER_COLOR = "#3a3f4b";
@@ -84,6 +85,16 @@ const canUnframe = computed(
       props.nodes.map((n) => n.id),
     ),
 );
+
+const nodeDescription = computed(() => {
+  if (multi.value) return "";
+  return props.def?.description?.trim() ?? "";
+});
+
+const documentedPorts = computed(() => {
+  if (multi.value || !node.value) return [];
+  return stackedPorts(node.value).filter((p) => p.label || p.description);
+});
 
 const avgX = computed(() => {
   if (!props.nodes.length) return 0;
@@ -187,6 +198,19 @@ function onYUpdate(target: number) {
       @update:model-value="onWidthUpdate"
     />
 
+    <p v-if="nodeDescription" class="node-docs">{{ nodeDescription }}</p>
+
+    <InspectorSection v-if="documentedPorts.length" title="Ports">
+      <div
+        v-for="p in documentedPorts"
+        :key="p.id"
+        class="port-doc"
+      >
+        <div class="port-doc-name">{{ p.label || p.name }}</div>
+        <div v-if="p.description" class="port-doc-desc">{{ p.description }}</div>
+      </div>
+    </InspectorSection>
+
     <InspectorError v-if="error && !multi" :message="error" />
 
     <GraphInterfacePanel
@@ -213,5 +237,32 @@ function onYUpdate(target: number) {
   position: static;
   top: auto;
   right: auto;
+}
+.node-docs {
+  margin: 0;
+  padding: 4px 0 2px;
+  font-size: 10px;
+  line-height: 1.35;
+  opacity: 0.78;
+  white-space: pre-wrap;
+  user-select: text;
+}
+.port-doc {
+  padding: 3px 0;
+}
+.port-doc + .port-doc {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.port-doc-name {
+  font-size: 11px;
+  line-height: 1.2;
+}
+.port-doc-desc {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.35;
+  opacity: 0.7;
+  white-space: pre-wrap;
+  user-select: text;
 }
 </style>

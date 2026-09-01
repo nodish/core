@@ -41,9 +41,11 @@ const rowHeightPx = computed(() => portRowHeight(props.port, props.typeDef));
 
 const widget = computed(() => effectiveWidget(props.typeDef, props.port));
 
+const displayName = computed(() => props.port.label || props.port.name);
+
 const placeholder = computed(() => {
   const label = props.typeDef?.label ?? props.port.type;
-  return `${props.port.name} (${label})`;
+  return `${displayName.value} (${label})`;
 });
 
 const acceptedTypeLabels = computed(() =>
@@ -54,7 +56,18 @@ const acceptedTypeLabels = computed(() =>
 
 const socketTitle = computed(() => {
   const types = acceptedTypeLabels.value.join(", ");
-  return `${props.port.name} - ${types}`;
+  const lines = [`${displayName.value} - ${types}`];
+  const portDoc = props.port.description?.trim();
+  if (portDoc) lines.push(portDoc);
+  const seen = new Set<string>();
+  for (const id of portTypes(props.port)) {
+    const typeDoc = props.types?.[id]?.description?.trim();
+    if (typeDoc && !seen.has(typeDoc)) {
+      seen.add(typeDoc);
+      lines.push(typeDoc);
+    }
+  }
+  return lines.join("\n");
 });
 
 const showEditable = computed(
@@ -124,7 +137,7 @@ function onCommit() {
       @update:value="onValueUpdate"
       @commit="onCommit"
     />
-    <span v-else class="label" :title="socketTitle">{{ port.name }}</span>
+    <span v-else class="label" :title="socketTitle">{{ displayName }}</span>
 
     <span
       v-if="side === 'out'"

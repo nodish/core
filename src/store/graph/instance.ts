@@ -15,6 +15,7 @@ function materialize(io: NodeIODefinition, direction: PortDirection): NodeIO {
     ports[id] = {
       id,
       name: def.name,
+      label: def.label,
       type: def.type,
       types: def.types,
       direction,
@@ -25,6 +26,7 @@ function materialize(io: NodeIODefinition, direction: PortDirection): NodeIO {
       connectionOnly: def.connectionOnly,
       customProps: def.customProps,
       autoConnect: def.autoConnect,
+      description: def.description,
     };
   }
   return ports;
