@@ -161,7 +161,7 @@ function evaluateGraph(
   mode: EvalMode,
 ): GraphRunResult | Promise<GraphRunResult> {
   const { byId, incoming } = indexGraph(map);
-  const cache = new Map<string, Values>();
+  const cache = new Map<string, Values | Promise<Values>>();
   const visiting = new Set<string>();
   const errors: NodeErrors = {};
   const pending: NodePending = {};
@@ -251,6 +251,8 @@ function evaluateGraph(
       return out;
     };
     if (tasks.some(isThenable)) {
+      // Each task already goes through outputsOf, which memoizes in-flight
+      // Promises so two ports never start two executes of the same node.
       return Promise.all(tasks).then(finish);
     }
     return finish(tasks);
@@ -366,13 +368,15 @@ function evaluateGraph(
       );
     }
 
-    if (isThenable(produced)) {
-      if (!mode.async) {
-        return fail(new PromiseExecuteError(node, displayName(node)));
-      }
-      return Promise.resolve(produced).then(after, fail);
+    if (!isThenable(produced)) return after(produced);
+    if (!mode.async) {
+      return fail(new PromiseExecuteError(node, displayName(node)));
     }
-    return after(produced);
+    // Share in-flight work with diamond dependents (two wires into one
+    // async node). Real cycles still hit `visiting` with nothing memoized.
+    const inflight = Promise.resolve(produced).then(after, fail);
+    cache.set(node.id, inflight);
+    return inflight;
   }
 
   function nestedMapFor(node: DefiniteNode): NodeMap {

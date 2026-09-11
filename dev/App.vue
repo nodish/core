@@ -15,6 +15,7 @@ const map = reactive(
     graphInterface: {
       returns: {
         delayed: { type: "number" },
+        delayedCopy: { type: "number" },
         sum: { type: "number" },
         fetched: { type: "string" },
       },
@@ -54,7 +55,10 @@ const delay = place("@test/delay", 80, 80);
 const slowAdd = place("@test/slow-add", 80, 280);
 const fakeFetch = place("@test/fake-fetch", 360, 80);
 const output = map.graph.nodes.find((n) => n.typeId === OUTPUT_TYPE);
-if (delay && output) wire(delay, "result", output, "delayed");
+if (delay && output) {
+  wire(delay, "result", output, "delayed");
+  wire(delay, "result", output, "delayedCopy");
+}
 if (slowAdd && output) wire(slowAdd, "result", output, "sum");
 if (fakeFetch && output) wire(fakeFetch, "body", output, "fetched");
 
