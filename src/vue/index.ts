@@ -13,8 +13,11 @@ export {
 } from "../store/graph/document";
 
 export {
+  isAbortError,
   runGraph,
+  runGraphAsync,
   type GraphRunResult,
+  type RunGraphAsyncOptions,
   type Values,
 } from "../store/graph/evaluate";
 
@@ -66,6 +69,7 @@ export type {
   Connection,
   ConnectionId,
   DefiniteNode,
+  ExecuteContext,
   FrameId,
   GraphDocument,
   GraphFrame,

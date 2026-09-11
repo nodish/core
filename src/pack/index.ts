@@ -34,6 +34,7 @@ export type { NodePack, PackSetupContext } from "../store/registry";
 
 export type {
   AutoConnectHint,
+  ExecuteContext,
   FrameId,
   GraphFrame,
   GraphPortSpec,

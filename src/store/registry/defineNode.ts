@@ -1,4 +1,5 @@
 import type {
+  ExecuteContext,
   GraphPortSpec,
   IndefiniteNode,
   NodeGraph,
@@ -44,10 +45,18 @@ export interface NodeSpec {
   inputs?: IOSpec;
   outputs?: IOSpec;
   /**
+   * When true, live auto-eval skips this node (keeps last outputs). Use for
+   * network / IO. Default false (pure).
+   */
+  io?: boolean;
+  /**
    * Runtime evaluation, keyed by port name. Omit for composite node packs.
    * @returns Output values keyed by port name.
    */
-  execute?: (inputs: Record<string, unknown>) => Record<string, unknown>;
+  execute?: (
+    inputs: Record<string, unknown>,
+    ctx: ExecuteContext,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
   /** Nested subgraph for composite types in a published pack. Not evaluated yet. */
   graph?: NodeGraph;
   /**
@@ -71,6 +80,7 @@ export function normalizeNode(spec: NodeSpec): IndefiniteNode {
     description: spec.description ?? "",
     keywords: spec.keywords,
     group: spec.group ?? [],
+    io: spec.io,
     inputs: expandIO(spec.inputs),
     outputs: expandIO(spec.outputs),
     execute: spec.execute,

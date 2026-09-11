@@ -198,6 +198,15 @@ export type PortRef = {
 // ---------------------------------------------------------------------------
 
 /**
+ * Passed to {@link IndefiniteNode.execute} on every run.
+ * Live eval and overlapping Test runs abort via {@link ExecuteContext.signal}.
+ */
+export interface ExecuteContext {
+  signal: AbortSignal;
+  nodeId: NodeId;
+}
+
+/**
  * Node type template that {@link DefiniteNode} instances are created from. Lives
  * in the runtime registry only (never in a saved graph). Authors ship types via
  * {@link NodePack}.
@@ -221,10 +230,18 @@ export interface IndefiniteNode {
   inputs: NodeIODefinition;
   outputs: NodeIODefinition;
   /**
+   * When true, live auto-eval skips this node (keeps last outputs) so network
+   * / IO work only runs from an explicit async graph run.
+   */
+  io?: boolean;
+  /**
    * Runtime evaluation, keyed by port name (not id). Omit for composite types.
    * @returns Output values keyed by port name.
    */
-  execute?: (inputs: Record<string, unknown>) => Record<string, unknown>;
+  execute?: (
+    inputs: Record<string, unknown>,
+    ctx: ExecuteContext,
+  ) => Record<string, unknown> | Promise<Record<string, unknown>>;
   /** Nested subgraph for composite types (registry-only, not evaluated standalone). */
   graph?: NodeGraph;
   /**

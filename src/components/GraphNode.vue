@@ -31,6 +31,7 @@ const props = withDefaults(
     selected?: boolean;
     selectedIds?: ReadonlySet<string>;
     error?: string;
+    pending?: boolean;
   }>(),
   { ioWidgets: false, zoom: 1, selected: false },
 );
@@ -173,7 +174,7 @@ function onHeaderPointerDown(ev: PointerEvent) {
 <template>
   <div
     class="node"
-    :class="{ selected, errored: !!error }"
+    :class="{ selected, errored: !!error && !pending, pending: pending && !error }"
     :style="{
       left: node.location.x + 'px',
       top: node.location.y + 'px',
@@ -183,7 +184,8 @@ function onHeaderPointerDown(ev: PointerEvent) {
     }"
     @pointerdown="onNodePointerDown"
   >
-    <div v-if="error" class="error-ring" :title="error" />
+    <div v-if="error && !pending" class="error-ring" :title="error" />
+    <div v-else-if="pending" class="pending-ring" title="Running" />
 
     <div
       class="header"
@@ -252,9 +254,19 @@ function onHeaderPointerDown(ev: PointerEvent) {
   z-index: 0;
 }
 .node.errored > .header,
-.node.errored > .body {
+.node.errored > .body,
+.node.pending > .header,
+.node.pending > .body {
   position: relative;
   z-index: 1;
+}
+.node.pending .pending-ring {
+  position: absolute;
+  inset: -4px;
+  border: 4px solid #60a5fa55;
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 0;
 }
 .header {
   display: flex;

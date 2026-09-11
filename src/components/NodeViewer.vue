@@ -16,7 +16,7 @@ import type {
   Port,
   PortRef,
 } from "../store/model";
-import { runGraph, type GraphRunResult } from "../store/graph/evaluate";
+import { runGraphAsync, isAbortError, type GraphRunResult, type Values } from "../store/graph/evaluate";
 import {
   addConnection,
   removeConnection,
@@ -105,10 +105,12 @@ const props = withDefaults(
     // When true: Input node outputs get editable fields; Output node inputs
     // show live computed results. Off by default.
     ioWidgets?: boolean;
-    /** When false, do not evaluate on change. Call `runGraph` yourself. */
+    /** When false, do not evaluate on change. Call `run` / `runGraphAsync` yourself. */
     autoEval?: boolean;
+    /** Quiet period before live eval after a graph change. */
+    autoEvalDebounceMs?: number;
   }>(),
-  { ioWidgets: false, autoEval: true },
+  { ioWidgets: false, autoEval: true, autoEvalDebounceMs: 200 },
 );
 
 const history = createGraphHistory();
@@ -177,15 +179,115 @@ function onDrillIn(id: string) {
   closeMenu();
 }
 
-const EMPTY_RUN: GraphRunResult = { values: {}, errors: {} };
+const EMPTY_RUN: GraphRunResult = { values: {}, errors: {}, pending: {} };
 
-const graphEval = computed(() =>
-  props.autoEval ? runGraph(activeMap.value) : EMPTY_RUN,
+const graphEval = ref<GraphRunResult>(EMPTY_RUN);
+const priorOutputs: Record<string, Values> = {};
+let evalController: AbortController | null = null;
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+let runGeneration = 0;
+
+function evalFingerprint(map: NodeMap): string {
+  const parts: unknown[] = [];
+  for (const c of map.graph.connections) {
+    parts.push(c.id, c.from.node, c.from.port, c.to.node, c.to.port);
+  }
+  for (const n of map.graph.nodes) {
+    parts.push(n.id, n.typeId);
+    for (const p of Object.values(n.inputs)) {
+      parts.push(p.id, p.name, p.type, p.value);
+    }
+    for (const p of Object.values(n.outputs)) {
+      parts.push(p.id, p.name, p.type, p.value);
+    }
+  }
+  return JSON.stringify(parts);
+}
+
+function abortInFlight(): void {
+  evalController?.abort();
+  evalController = null;
+}
+
+function abortEval(): void {
+  abortInFlight();
+  if (debounceTimer !== null) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  graphEval.value = { ...graphEval.value, pending: {} };
+}
+
+function startEval(skipIo: boolean): Promise<void> {
+  abortInFlight();
+  const ac = new AbortController();
+  evalController = ac;
+  const gen = ++runGeneration;
+  const map = activeMap.value;
+
+  return runGraphAsync(map, {}, {
+    signal: ac.signal,
+    skipIo,
+    priorOutputs,
+    onProgress(snap) {
+      if (gen !== runGeneration || ac.signal.aborted) return;
+      graphEval.value = {
+        values: graphEval.value.values,
+        errors: snap.errors,
+        pending: snap.pending,
+      };
+    },
+  })
+    .then((result) => {
+      if (gen !== runGeneration || ac.signal.aborted) return;
+      graphEval.value = result;
+    })
+    .catch((err) => {
+      if (isAbortError(err) || ac.signal.aborted) {
+        if (gen === runGeneration) {
+          graphEval.value = { ...graphEval.value, pending: {} };
+        }
+        return;
+      }
+      console.error(err);
+    });
+}
+
+function scheduleAutoEval(): void {
+  abortInFlight();
+  if (debounceTimer !== null) clearTimeout(debounceTimer);
+  graphEval.value = { ...graphEval.value, pending: {} };
+  debounceTimer = setTimeout(() => {
+    debounceTimer = null;
+    void startEval(true);
+  }, props.autoEvalDebounceMs);
+}
+
+function run(): Promise<void> {
+  if (debounceTimer !== null) {
+    clearTimeout(debounceTimer);
+    debounceTimer = null;
+  }
+  return startEval(false);
+}
+
+watch(
+  () => (props.autoEval ? evalFingerprint(activeMap.value) : null),
+  (fp) => {
+    if (fp == null) {
+      abortEval();
+      return;
+    }
+    scheduleAutoEval();
+  },
+  { immediate: true },
 );
+
 const ioResults = computed(() =>
   effectiveIoWidgets.value ? graphEval.value.values : undefined,
 );
 const nodeErrors = computed(() => graphEval.value.errors);
+const nodePending = computed(() => graphEval.value.pending);
 
 // Log when a node's error message appears or changes (not on every pan/drag).
 const lastLoggedErrors = ref<Record<string, string>>({});
@@ -742,7 +844,7 @@ function resetView() {
   interfaceRevision.value++;
 }
 
-defineExpose({ resetView });
+defineExpose({ resetView, run });
 
 function isEditingField(e: KeyboardEvent): boolean {
   const el = e.target;
@@ -936,6 +1038,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  abortEval();
   window.removeEventListener("keydown", onKeyDown);
   if (normalizeTimer !== undefined) window.clearInterval(normalizeTimer);
 });
@@ -1016,6 +1119,7 @@ onUnmounted(() => {
         :selected="selectedIds.includes(node.id)"
         :selected-ids="selectedSet"
         :error="nodeErrors[node.id]"
+        :pending="!!nodePending[node.id]"
         @connect-start="onConnectStart"
         @select="onSelect"
         @drill-in="onDrillIn"
