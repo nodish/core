@@ -24,16 +24,20 @@ const HEADER_COLOR = "#3a3f4b";
 const history = inject(graphHistoryKey, null);
 const rootMap = inject(rootMapKey, null);
 
-const props = defineProps<{
-  map: NodeMap;
-  nodes: DefiniteNode[];
-  def: IndefiniteNode | null;
-  error?: string;
-  graphInterface: GraphInterface;
-  interfaceRevision: number;
-  interfaceCommitError?: string;
-  applyInterfaceMutation: (mutate: InterfaceMutator) => string[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    map: NodeMap;
+    nodes: DefiniteNode[];
+    def: IndefiniteNode | null;
+    error?: string;
+    graphInterface: GraphInterface;
+    interfaceRevision: number;
+    interfaceCommitError?: string;
+    editInterface?: boolean;
+    applyInterfaceMutation: (mutate: InterfaceMutator) => string[];
+  }>(),
+  { editInterface: true },
+);
 
 const emit = defineEmits<{
   "update:label": [value: string];
@@ -214,7 +218,7 @@ function onYUpdate(target: number) {
     <InspectorError v-if="error && !multi" :message="error" />
 
     <GraphInterfacePanel
-      v-if="interfaceMode"
+      v-if="interfaceMode && editInterface"
       :graph-interface="graphInterface"
       :mode="interfaceMode"
       :revision="interfaceRevision"

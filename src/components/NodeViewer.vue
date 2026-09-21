@@ -109,8 +109,18 @@ const props = withDefaults(
     autoEval?: boolean;
     /** Quiet period before live eval after a graph change. */
     autoEvalDebounceMs?: number;
+    /**
+     * When false, hide the Graph inputs/outputs editor on the root Input and
+     * Output nodes (fixed signature). Nested groups remain editable when drilled in.
+     */
+    editInterface?: boolean;
   }>(),
-  { ioWidgets: false, autoEval: true, autoEvalDebounceMs: 200 },
+  {
+    ioWidgets: false,
+    autoEval: true,
+    autoEvalDebounceMs: 200,
+    editInterface: true,
+  },
 );
 
 const history = createGraphHistory();
@@ -139,6 +149,9 @@ const drilledComposite = computed(() =>
 const nestedIoWidgets = ref(false);
 const effectiveIoWidgets = computed(() =>
   editStack.value.length ? nestedIoWidgets.value : props.ioWidgets,
+);
+const effectiveEditInterface = computed(
+  () => (editStack.value.length ? true : props.editInterface),
 );
 
 function popUpOneLevel() {
@@ -1078,6 +1091,7 @@ onUnmounted(() => {
         :graph-interface="activeGraphInterface"
         :interface-revision="interfaceRevision"
         :interface-commit-error="interfaceCommitError"
+        :edit-interface="effectiveEditInterface"
         :apply-interface-mutation="applyInterfaceMutationFromViewer"
         :error="
           selectedNodes.length === 1
